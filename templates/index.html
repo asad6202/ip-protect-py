@@ -21,7 +21,11 @@
 
     <div id="error" class="error hidden"></div>
 
-    <div id="sql" class="sql hidden">
+    <div id="sql-toggle" class="sql-toggle">
+      <button id="toggle-sql-btn" class="hidden" aria-expanded="false" aria-controls="sql">Show SQL</button>
+    </div>
+
+    <div id="sql" class="sql hidden" aria-hidden="true">
       <h3>Generated SQL</h3>
       <pre id="sql-text"></pre>
     </div>
@@ -51,11 +55,33 @@
     const sqlText = document.getElementById('sql-text');
     const resultsBox = document.getElementById('results');
     const resultsBody = document.getElementById('results-body');
+    const toggleBtn = document.getElementById('toggle-sql-btn');
 
     function show(el) { el.classList.remove('hidden'); }
     function hide(el) { el.classList.add('hidden'); }
     function setError(msg) { errorBox.textContent = msg; show(errorBox); }
     function clearError() { errorBox.textContent = ''; hide(errorBox); }
+
+    function setSqlVisibility(visible) {
+      if (visible) {
+        sqlBox.removeAttribute('aria-hidden');
+        show(sqlBox);
+        toggleBtn.textContent = 'Hide SQL';
+        toggleBtn.setAttribute('aria-expanded', 'true');
+      } else {
+        sqlBox.setAttribute('aria-hidden', 'true');
+        hide(sqlBox);
+        toggleBtn.textContent = 'Show SQL';
+        toggleBtn.setAttribute('aria-expanded', 'false');
+      }
+    }
+
+    // Toggle button behaviour
+    toggleBtn.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      const expanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+      setSqlVisibility(!expanded);
+    });
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -83,12 +109,18 @@
         const data = await res.json();
         if (data.sql) {
           sqlText.textContent = data.sql;
-          show(sqlBox);
+          // show toggle button and set initial state to hidden
+          toggleBtn.classList.remove('hidden');
+          setSqlVisibility(false);
+        } else {
+          // hide toggle if no sql provided
+          toggleBtn.classList.add('hidden');
+          setSqlVisibility(false);
         }
 
         if (Array.isArray(data.results)) {
           if (data.results.length === 0) {
-            resultsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No results</td></tr>';
+            resultsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Items not found</td></tr>';
           } else {
             for (const row of data.results) {
               const tr = document.createElement('tr');
