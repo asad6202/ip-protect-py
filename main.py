@@ -7,12 +7,16 @@ from fastapi.staticfiles import StaticFiles
 from db import Database
 from gpt import generate_sql_from_nl
 from schemas import QueryRequest, QueryResponse
+from app.api.v1.router import api_router
 
 
-app = FastAPI(title="NL2SQL API", version="1.0.0")
+app = FastAPI(title="IP Protect API", version="1.0.0")
 
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Include API routes
+app.include_router(api_router, prefix="/api/v1")
 
 db = Database()
 

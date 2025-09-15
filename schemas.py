@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Any, List, Dict
+from typing import Any, List, Dict, Optional
 
 
 class QueryRequest(BaseModel):
@@ -16,5 +16,29 @@ class QueryResponse(BaseModel):
     """Final response containing query results."""
     results: List[Dict[str, Any]]
     sql: str | None = None
+
+
+# Quote generation schemas
+class QuoteRequest(BaseModel):
+    """Request for quote generation."""
+    prompt: str = Field(..., min_length=1, description="Natural language description of camera/accessory needs")
+
+
+class QuoteItem(BaseModel):
+    """Individual item in a quote."""
+    sku: str
+    description: str
+    quantity: int
+    unit_price: float
+    currency: str
+    subtotal: float
+
+
+class QuoteResponse(BaseModel):
+    """Response containing generated quote."""
+    items: List[QuoteItem]
+    total: float
+    currency: str
+    notes: Optional[str] = None
 
 

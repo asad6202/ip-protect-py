@@ -1,0 +1,67 @@
+### Quote Generation API Tests
+### Make sure to set your OPENAI_API_KEY and DATABASE_URL environment variables
+
+### Test 1: Natural language query with specific requirements
+POST http://localhost:8000/api/v1/quote
+Content-Type: application/json
+
+{
+  "prompt": "Need 4 outdoor dome cameras with IR 30m and PoE. Add 1 NVR 16 channels and a 24-port PoE switch."
+}
+
+###
+
+### Test 2: Query with specific SKU
+POST http://localhost:8000/api/v1/quote
+Content-Type: application/json
+
+{
+  "prompt": "I need 2 units of SKU ABC123 and 1 dome camera with 4K resolution"
+}
+
+###
+
+### Test 3: Budget-constrained query
+POST http://localhost:8000/api/v1/quote
+Content-Type: application/json
+
+{
+  "prompt": "Want 6 indoor cameras with H.265 encoding, avoid PTZ cameras, budget $200 per camera"
+}
+
+###
+
+### Test 4: Brand preference query
+POST http://localhost:8000/api/v1/quote
+Content-Type: application/json
+
+{
+  "prompt": "Need 8 outdoor bullet cameras, prefer Axis brand, avoid Hikvision, with night vision and weatherproof rating"
+}
+
+###
+
+### Test 5: Complete system query
+POST http://localhost:8000/api/v1/quote
+Content-Type: application/json
+
+{
+  "prompt": "Looking for a complete surveillance system: 12 cameras (mix of dome and bullet), NVR with 16 channels, PoE switch, and all necessary cables for outdoor installation"
+}
+
+###
+
+### Test 6: Health check
+GET http://localhost:8000/api/v1/quote/health
+
+###
+
+### Test 7: Minimal query
+POST http://localhost:8000/api/v1/quote
+Content-Type: application/json
+
+{
+  "prompt": "Need 2 cameras"
+}
+
+###
