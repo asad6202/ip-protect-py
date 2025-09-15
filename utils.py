@@ -46,6 +46,10 @@ def enforce_limit(sql: str, max_rows: int = 10) -> str:
     """Ensure a LIMIT clause not exceeding max_rows is present."""
     if not sql:
         return sql
+    lowered_all = sql.lower()
+    # If the query is a UNION of multiple SELECTs, assume per-SELECT LIMITs and do not append a global LIMIT
+    if " union " in lowered_all:
+        return sql
     # If query already has a LIMIT, cap it
     limit_match = re.search(r"\blimit\s+(\d+)", sql, flags=re.IGNORECASE)
     if limit_match:

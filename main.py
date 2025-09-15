@@ -42,6 +42,11 @@ async def query_endpoint(payload: QueryRequest) -> QueryResponse:
     # Execute SQL and return results
     try:
         results = await db.fetch(sql)
+        # Normalize live schema to include 'status' for UI compatibility
+        for row in results:
+            if 'status' not in row:
+                if 'active' in row:
+                    row['status'] = 'active' if row.get('active') else 'inactive'
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Database error: {exc}")
 
