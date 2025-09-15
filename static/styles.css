@@ -33,3 +33,15 @@ thead th { color: var(--muted); font-weight: 600; font-size: 14px; }
 tbody td { font-size: 14px; }
 
 
+/* SQL toggle improvements */
+.sql-toggle { 
+  margin: 16px 0; 
+}
+.sql-toggle button { 
+  background: var(--muted); 
+  color: var(--bg); 
+  font-size: 12px; 
+  padding: 8px 12px; 
+}
+
+
