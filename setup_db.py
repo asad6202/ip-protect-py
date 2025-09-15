@@ -7,7 +7,7 @@ load_dotenv()
 
 
 async def setup_database():
-    """Set up the database and create the products table."""
+    """Set up the database and create the products table (live schema)."""
     dsn = os.getenv("DATABASE_URL")
     if not dsn:
         print("❌ DATABASE_URL not set in .env file")
@@ -21,12 +21,21 @@ async def setup_database():
         # Create products table
         create_table_sql = """
         CREATE TABLE IF NOT EXISTS products (
-            sku TEXT PRIMARY KEY,
+            id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+            manufacturer_id UUID,
+            sku TEXT UNIQUE,
             description TEXT,
-            price FLOAT,
+            price NUMERIC,
             currency TEXT,
-            family TEXT,
-            status TEXT
+            active BOOLEAN DEFAULT TRUE,
+            trained BOOLEAN DEFAULT FALSE,
+            raw JSONB,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW(),
+            manufacturer_slug TEXT,
+            search_text TEXT,
+            product_number TEXT,
+            family TEXT
         );
         """
 

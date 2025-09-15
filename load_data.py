@@ -9,15 +9,24 @@ load_dotenv()
 
 
 async def create_table(db_pool):
-    """Create the products table if it doesn't exist."""
+    """Create the products table if it doesn't exist (live schema)."""
     create_sql = """
     CREATE TABLE IF NOT EXISTS products (
-        sku TEXT PRIMARY KEY,
+        id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+        manufacturer_id UUID,
+        sku TEXT UNIQUE,
         description TEXT,
-        price FLOAT,
+        price NUMERIC,
         currency TEXT,
-        family TEXT,
-        status TEXT
+        active BOOLEAN DEFAULT TRUE,
+        trained BOOLEAN DEFAULT FALSE,
+        raw JSONB,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW(),
+        manufacturer_slug TEXT,
+        search_text TEXT,
+        product_number TEXT,
+        family TEXT
     );
     """
     async with db_pool.acquire() as conn:
@@ -36,13 +45,15 @@ async def load_csv_data(db_pool, csv_file_path: str):
         for row in reader:
             # Clean and validate data
             try:
+                raw_status = (row.get('status') or '').strip().strip('"').lower()
+                is_active = raw_status == 'active' if raw_status else True
                 product = {
                     'sku': row['sku'].strip().strip('"'),
                     'description': row['description'].strip().strip('"'),
                     'price': float(row['price'].strip().strip('"')),
                     'currency': row['currency'].strip().strip('"'),
                     'family': row['family'].strip().strip('"'),
-                    'status': row['status'].strip().strip('"')
+                    'active': is_active,
                 }
                 products.append(product)
             except (ValueError, KeyError) as e:
@@ -59,21 +70,22 @@ async def load_csv_data(db_pool, csv_file_path: str):
 
             # Use ON CONFLICT to handle duplicates
             insert_sql = """
-            INSERT INTO products (sku, description, price, currency, family, status)
+            INSERT INTO products (sku, description, price, currency, family, active)
             VALUES ($1, $2, $3, $4, $5, $6)
             ON CONFLICT (sku) DO UPDATE SET
                 description = EXCLUDED.description,
                 price = EXCLUDED.price,
                 currency = EXCLUDED.currency,
                 family = EXCLUDED.family,
-                status = EXCLUDED.status
+                active = EXCLUDED.active,
+                updated_at = NOW()
             """
 
             for product in batch:
                 try:
                     await conn.execute(insert_sql,
                         product['sku'], product['description'], product['price'],
-                        product['currency'], product['family'], product['status']
+                        product['currency'], product['family'], product['active']
                     )
                     total_inserted += 1
                 except Exception as e:
@@ -122,10 +134,11 @@ async def main():
             print(f"📊 Total products in database: {count}")
 
             # Show sample data
-            sample = await conn.fetch("SELECT sku, description, price, currency, family FROM products LIMIT 3")
+            sample = await conn.fetch("SELECT sku, description, price, currency, family, active FROM products LIMIT 3")
             print("\n📋 Sample data:")
             for row in sample:
-                print(f"  {row['sku']}: {row['description'][:50]}... - ${row['price']} {row['currency']} ({row['family']})")
+                status = 'active' if row.get('active') else 'inactive'
+                print(f"  {row['sku']}: {row['description'][:50]}... - ${row['price']} {row['currency']} ({row['family']}) [{status}]")
 
     except Exception as e:
         print(f"❌ Error: {e}")
