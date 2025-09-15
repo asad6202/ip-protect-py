@@ -2,7 +2,7 @@ import re
 from typing import Optional
 
 
-SELECT_ONLY_PATTERN = re.compile(r"^\s*select\b", flags=re.IGNORECASE | re.DOTALL)
+SELECT_ONLY_PATTERN = re.compile(r"^\s*(select|with)\b", flags=re.IGNORECASE | re.DOTALL)
 FORBIDDEN_KEYWORDS = re.compile(
     r"\b(insert|update|delete|drop|alter|truncate|create|grant|revoke|commit|rollback)\b",
     flags=re.IGNORECASE,
@@ -12,7 +12,7 @@ ALLOWED_TABLE = "products"
 
 
 def is_select_only(sql: str) -> bool:
-    """Ensure SQL starts with SELECT and contains no forbidden write/ddl keywords.
+    """Ensure SQL starts with SELECT or WITH and contains no forbidden write/ddl keywords.
 
     This is a defensive guard; we also strip trailing semicolons and comments.
     """
@@ -67,23 +67,34 @@ def enforce_limit(sql: str, max_rows: int = 10) -> str:
 def validate_sql_safe(sql: str) -> Optional[str]:
     """Return an error string if unsafe, else None."""
     if not is_select_only(sql):
-        return "Only SELECT statements are allowed."
+        return "Only SELECT statements and CTEs are allowed."
     if FORBIDDEN_CHARS.search(sql):
         return "Potentially unsafe SQL characters detected."
     # Enforce only the products table is referenced (simple guard)
     # Accept forms like FROM products p, JOIN products AS p, etc.
-    # Disallow other tables or schemas by checking tokens after FROM/JOIN keywords.
+    # Also allow CTE names in FROM clauses
     lowered = sql.lower()
     from_matches = re.findall(r"\bfrom\s+([a-zA-Z0-9_\.]+)", lowered)
     join_matches = re.findall(r"\bjoin\s+([a-zA-Z0-9_\.]+)", lowered)
     referenced = set(from_matches + join_matches)
+    
+    # Extract CTE names if present
+    cte_names = set()
+    if lowered.strip().startswith("with"):
+        # Simple CTE name extraction
+        cte_matches = re.findall(r"\bwith\s+(\w+)\s+as\b|\s+(\w+)\s+as\b", lowered)
+        for match in cte_matches:
+            name = match[0] or match[1]
+            if name:
+                cte_names.add(name)
+    
     if not referenced:
         return "Query must reference the products table."
     for name in referenced:
-        # Strip optional schema
-        base = name.split(".")[-1]
-        if base != ALLOWED_TABLE:
-            return "Only the products table is allowed."
+        # Strip optional schema and parentheses
+        base = name.split(".")[-1].strip("()")
+        if base != ALLOWED_TABLE and base not in cte_names:
+            return f"Only the products table and defined CTEs are allowed. Found: {base}"
     return None
 
 
