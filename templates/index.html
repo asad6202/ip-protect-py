@@ -8,14 +8,14 @@
 </head>
 <body>
   <div class="container">
-    <h1>NL2SQL Demo</h1>
-    <p>Ask a question about products. We'll translate it to SQL and show results.</p>
+    <h1>Product Recommendation Assistant</h1>
+    <p>Ask a question about products. I'll translate it to SQL and show results.</p>
 
     <form id="query-form">
       <label for="query">Your question</label>
       <div class="row">
-        <input type="text" id="query" name="query" placeholder="e.g., Show active vandal resistant cameras under 1400 CAD" required />
-        <button type="submit">Run</button>
+        <input type="text" id="query" name="query" placeholder="e.g., I need 3 dome cameras with IR 30m and PoE, and a 16-channel NVR under $1000" required />
+        <button type="submit">Search</button>
       </div>
     </form>
 
@@ -107,6 +107,7 @@
         }
 
         const data = await res.json();
+
         if (data.sql) {
           sqlText.textContent = data.sql;
           // show toggle button and set initial state to hidden
