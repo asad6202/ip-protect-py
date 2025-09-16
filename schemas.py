@@ -32,6 +32,8 @@ class QuoteItem(BaseModel):
     unit_price: float
     currency: str
     subtotal: float
+    is_fallback: Optional[bool] = False
+    original_request: Optional[str] = None  # What was originally requested
 
 
 class QuoteResponse(BaseModel):

@@ -3,10 +3,9 @@ DB-agnostic intent extractor for CCTV product requests.
 
 - Deterministic OpenAI call (temperature=0) + in-memory cache by prompt
 - Falls back to a local heuristic parser if OpenAI is unavailable
-- No hardcoded family enums (free-form strings)
 - Normalizes features (poe/poe+, h265, ir-XXm, 4k/1080p, indoor/outdoor, vandal, audio)
 - Extracts SKUs/EANs, quantities, budgets, brand prefs/avoids
-- Produces prepared_filters for fuzzy SQL (expanded token variants)
+- Adds 'vague' flag for camera-only asks (no SKU/form/location/features)
 """
 
 from __future__ import annotations
@@ -14,24 +13,21 @@ import os
 import re
 import json
 from typing import Any, Dict, List, Optional, Tuple
-
 from dotenv import load_dotenv
 
-# OpenAI is optional; import guarded
 try:
     from openai import OpenAI
-except Exception:  # pragma: no cover
+except Exception:
     OpenAI = None  # type: ignore
 
 load_dotenv()
-
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_MODEL = os.getenv("OPENAI_INTENT_MODEL", "gpt-4o-mini")
 
 # ------------------------------- Regexes --------------------------------------
 
-EAN_RE   = re.compile(r"\b(?<!\d)(\d{13})(?!\d)\b")          # EAN-13
-UPC_RE   = re.compile(r"\b(?<!\d)(\d{12})(?!\d)\b")          # UPC-A
+EAN_RE   = re.compile(r"\b(?<!\d)(\d{13})(?!\d)\b")
+UPC_RE   = re.compile(r"\b(?<!\d)(\d{12})(?!\d)\b")
 SKU_RE   = re.compile(r"\b(?=[A-Za-z0-9_-]{3,40}\b)(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9_-]+\b")
 QTY_PAIR = re.compile(r"\b(?:(?:qty|quantity|need|want)\s*)?(\d{1,3})\s*(?:x|\*)?\b", re.I)
 IR_RE    = re.compile(r"\b(?:ir|infrared|exir)\s*[- ]?\s*(\d{1,3})\s*m\b", re.I)
@@ -75,6 +71,30 @@ TOKEN_VARIANTS: Dict[str, List[str]] = {
     "1080p": ["1080p", "full hd", "fhd"],
 }
 
+# ------------------------------ Vague camera flag -----------------------------
+
+def _is_vague_camera_request(text: str, it: Dict[str, Any]) -> bool:
+    """
+    Vague if it asks for a camera but provides no concrete constraints:
+    - no SKU
+    - family == camera
+    - no formFactor, no location, and no feature tokens
+    """
+    t = (text or "").lower()
+    mentions_camera = any(w in t for w in ["camera", "cameras", "dome", "bullet", "turret", "ptz"])
+    if not mentions_camera:
+        return False
+    if (it.get("sku") or "").strip():
+        return False
+    if (it.get("family") or "").lower() != "camera":
+        return False
+    if it.get("formFactor") or it.get("location"):
+        return False
+    feats = it.get("features") or []
+    return len(feats) == 0
+
+# ------------------------------ Helpers ---------------------------------------
+
 def _norm_feature_token(raw: str) -> Optional[str]:
     if not raw:
         return None
@@ -109,9 +129,7 @@ def expand_variants(tokens: List[str]) -> List[str]:
 
 # ------------------------------ Heuristic parser ------------------------------
 
-WORDS_TO_NUM = {
-    "one":1,"two":2,"three":3,"four":4,"five":5,"six":6,"seven":7,"eight":8,"nine":9,"ten":10,
-}
+WORDS_TO_NUM = {"one":1,"two":2,"three":3,"four":4,"five":5,"six":6,"seven":7,"eight":8,"nine":9,"ten":10}
 
 def _guess_family(text: str) -> Optional[str]:
     t = text.lower()
@@ -125,16 +143,14 @@ def _guess_family(text: str) -> Optional[str]:
     return None
 
 def _extract_budget(text: str) -> Optional[Dict[str, Any]]:
-    m = MONEY_RE.search(text)
-    if not m:
-        return None
-    amt = float(m.group(1))
-    cur = (m.group(2) or "").upper() or "USD"
+    m = MONEY_RE.search(text); 
+    if not m: return None
+    amt = float(m.group(1)); cur = (m.group(2) or "").upper() or "USD"
     return {"amount": amt, "currency": cur}
 
 def _extract_brands(text: str) -> Tuple[List[str], List[str]]:
     prefs = [b.lower() for b in BRAND_RE.findall(text)]
-    avoids = []
+    avoids: List[str] = []
     for m in AVOID_RE.finditer(text):
         avoids.append(m.group(2).lower())
     return sorted(set(prefs)), sorted(set(avoids))
@@ -142,24 +158,18 @@ def _extract_brands(text: str) -> Tuple[List[str], List[str]]:
 def _extract_qty(text: str) -> int:
     t = text.lower()
     for w,n in WORDS_TO_NUM.items():
-        if re.search(rf"\b{w}\b", t):
-            return n
+        if re.search(rf"\b{w}\b", t): return n
     m = QTY_PAIR.search(t)
     if m:
-        try:
-            return max(1, int(m.group(1)))
-        except Exception:
-            pass
+        try: return max(1, int(m.group(1)))
+        except Exception: pass
     return 1
 
 def _extract_skus(text: str) -> List[str]:
     skus = set()
-    for m in EAN_RE.finditer(text):
-        skus.add(m.group(1))
-    for m in UPC_RE.finditer(text):
-        skus.add(m.group(1))
-    for m in SKU_RE.finditer(text):
-        skus.add(m.group(0))
+    for m in EAN_RE.finditer(text): skus.add(m.group(1))
+    for m in UPC_RE.finditer(text): skus.add(m.group(1))
+    for m in SKU_RE.finditer(text): skus.add(m.group(0))
     return list(skus)
 
 def heuristic_intent(user_text: str) -> Dict[str, Any]:
@@ -183,7 +193,7 @@ def heuristic_intent(user_text: str) -> Dict[str, Any]:
 
     if skus:
         for s in skus:
-            items.append({
+            it = {
                 "quantity": qty,
                 "sku": s,
                 "family": family,
@@ -193,9 +203,24 @@ def heuristic_intent(user_text: str) -> Dict[str, Any]:
                 "brandPreference": prefs,
                 "brandAvoid": avoids,
                 "budgetPerUnit": budget,
-            })
+            }
+            ch = re.search(r"\b(\d{1,3})\s*chan(nel)?s?\b", t, re.I)
+            pr = re.search(r"\b(\d{1,3})\s*port(s)?\b", t, re.I)
+            if (it.get("family") or "").lower() == "nvr" and ch:
+                it["requiredChannels"] = int(ch.group(1))
+            if (it.get("family") or "").lower() == "switch" and pr:
+                it["requiredPorts"] = int(pr.group(1))
+            it["prepared_filters"] = {
+                "tokens": [],
+                "expanded_tokens": [],
+                "max_price": (it.get("budgetPerUnit") or {}).get("amount"),
+                "brand_preference": it.get("brandPreference") or [],
+                "brand_avoid": it.get("brandAvoid") or [],
+            }
+            it["vague"] = _is_vague_camera_request(t, it)
+            items.append(it)
     else:
-        items.append({
+        it = {
             "quantity": qty,
             "sku": None,
             "family": family,
@@ -207,11 +232,15 @@ def heuristic_intent(user_text: str) -> Dict[str, Any]:
             "brandPreference": prefs,
             "brandAvoid": avoids,
             "budgetPerUnit": budget,
-        })
-
-    for it in items:
-        tokens = []
-        for k in ("formFactor", "location"):
+        }
+        ch = re.search(r"\b(\d{1,3})\s*chan(nel)?s?\b", t, re.I)
+        pr = re.search(r"\b(\d{1,3})\s*port(s)?\b", t, re.I)
+        if (it.get("family") or "").lower() == "nvr" and ch:
+            it["requiredChannels"] = int(ch.group(1))
+        if (it.get("family") or "").lower() == "switch" and pr:
+            it["requiredPorts"] = int(pr.group(1))
+        tokens: List[str] = []
+        for k in ("formFactor","location"):
             v = (it.get(k) or "").strip().lower()
             if v and v != "any":
                 tokens.append(v)
@@ -223,16 +252,15 @@ def heuristic_intent(user_text: str) -> Dict[str, Any]:
             "brand_preference": it.get("brandPreference") or [],
             "brand_avoid": it.get("brandAvoid") or [],
         }
+        it["vague"] = _is_vague_camera_request(t, it)
+        items.append(it)
 
     g: Dict[str, Any] = {}
     ch = re.search(r"\b(\d{1,3})\s*chan(nel)?s?\b", t, re.I)
-    if ch:
-        g["nvrChannels"] = int(ch.group(1))
+    if ch: g["nvrChannels"] = int(ch.group(1))
     pr = re.search(r"\b(\d{1,3})\s*port(s)?\b", t, re.I)
-    if pr:
-        g["switchPorts"] = int(pr.group(1))
-    if "avoid ptz" in t.lower():
-        g["avoidPtz"] = True
+    if pr: g["switchPorts"] = int(pr.group(1))
+    if "avoid ptz" in t.lower(): g["avoidPtz"] = True
 
     return {"items": items, "global": g}
 
@@ -307,8 +335,6 @@ TOOLS = [{
     }
 }]
 
-# ---------------------- Deterministic + cache wrapper -------------------------
-
 _INTENT_CACHE: Dict[str, Dict[str, Any]] = {}
 
 def _extract_with_openai(user_text: str) -> Dict[str, Any]:
@@ -323,25 +349,25 @@ def _extract_with_openai(user_text: str) -> Dict[str, Any]:
         top_p=1.0,
         presence_penalty=0,
         frequency_penalty=0,
-        # seed=42,  # uncomment if your SDK/model supports it for extra determinism
     )
     tool_calls = resp.choices[0].message.tool_calls or []
-    if not tool_calls or tool_calls[0].function.name != "intent":
-        return heuristic_intent(user_text)
-    raw = json.loads(tool_calls[0].function.arguments)
-    # normalize + add prepared_filters
-    items = []
-    for it in raw.get("items", []):
+    raw = {}
+    if tool_calls and tool_calls[0].function.name == "intent":
+        raw = json.loads(tool_calls[0].function.arguments)
+
+    items: List[Dict[str, Any]] = []
+    for it in (raw.get("items") or [{"quantity":1}]):
         it = dict(it)
-        # qty
         try:
             it["quantity"] = max(1, int(it.get("quantity") or 1))
         except Exception:
             it["quantity"] = 1
-        # normalize lists
+
+        # Normalize lists
         it["features"] = normalize_features(it.get("features") or [])
         it["brandPreference"] = sorted({(v or "").strip().lower() for v in (it.get("brandPreference") or []) if v})
         it["brandAvoid"] = sorted({(v or "").strip().lower() for v in (it.get("brandAvoid") or []) if v})
+
         # prepared filters
         tokens: List[str] = []
         for k in ("formFactor","location"):
@@ -356,16 +382,20 @@ def _extract_with_openai(user_text: str) -> Dict[str, Any]:
             "brand_preference": it.get("brandPreference"),
             "brand_avoid": it.get("brandAvoid"),
         }
+        it["vague"] = _is_vague_camera_request(user_text, it)
         items.append(it)
+
     g = raw.get("global") or {}
     if isinstance(g.get("avoidPtz"), str):
         g["avoidPtz"] = g["avoidPtz"].strip().lower() in {"true","1","yes","y"}
+
     return {"items": items, "global": g}
 
 def extract_intent(user_text: str) -> Dict[str, Any]:
     key = user_text.strip().lower()
     if key in _INTENT_CACHE:
         return _INTENT_CACHE[key]
+
     if OPENAI_API_KEY and OpenAI:
         try:
             result = _extract_with_openai(user_text)
@@ -373,19 +403,16 @@ def extract_intent(user_text: str) -> Dict[str, Any]:
             return result
         except Exception:
             pass
+
     result = heuristic_intent(user_text)
     _INTENT_CACHE[key] = result
     return result
 
-# ------------------------------- Local test -----------------------------------
-
 if __name__ == "__main__":
     samples = [
         "Need 4 outdoor dome cameras with IR 30m and PoE. Add 1 NVR 16 channels and a 24-port PoE switch.",
-        "3x 01001-001 and 5x 01017-001 and 2x WV-Q159C",
+        "give me a camera",
         "Prefer Axis, avoid PTZ. Budget $900 each. 5 outdoor cameras IR 60m.",
-        "find product with EAN 7331021067455",
-        "Need two indoor bullets with audio, cheap, under 200 USD each",
         "One server and 8 cameras, 16-channel recorder, and 24 ports PoE switch",
     ]
     for s in samples:
