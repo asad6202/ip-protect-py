@@ -95,6 +95,11 @@ def validate_sql_safe(sql: str) -> Optional[str]:
         base = name.split(".")[-1].strip("()")
         if base != ALLOWED_TABLE and base not in cte_names:
             return f"Only the products table and defined CTEs are allowed. Found: {base}"
+
+    # Additional conservative rule: do not allow comparisons on sku to a literal with spaces
+    # e.g., WHERE sku = 'AXIS FA4115 SENSOR UNIT' should be rejected
+    if re.search(r"\bsku\s*=\s*'[^']*\s+[^']*'", sql, flags=re.IGNORECASE):
+        return "SKU value must not contain spaces; compare sku only to compact codes (e.g., '01017-001')."
     return None
 
 

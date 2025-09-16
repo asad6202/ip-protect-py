@@ -1,6 +1,6 @@
-# NL2SQL API - Natural Language to SQL Query System
+# NL→SQL API — Natural language to safe SQL for product catalog
 
-A production-ready FastAPI application that converts natural language queries into safe SQL statements and executes them against a PostgreSQL database containing camera product data.
+A FastAPI application that converts natural language into safe PostgreSQL queries and runs them against a camera products catalog. The pipeline is LLM-first (OpenAI), with minimal deterministic fallbacks for reliability.
 
 ## 🚀 Features
 
@@ -15,18 +15,19 @@ A production-ready FastAPI application that converts natural language queries in
 ## 🏗️ Architecture
 
 ```
-User Query → GPT-4o → SQL Validation → PostgreSQL → JSON Response
+User Query → GPT (LLM-first) → SQL normalization & validation → PostgreSQL → JSON Response
 ```
 
 ### Components
 
 - **FastAPI Server** (`main.py`): REST API endpoints and lifecycle management
-- **GPT Integration** (`gpt.py`): OpenAI API calls with prompt engineering
+- **GPT Integration** (`gpt.py`): OpenAI API calls with prompt engineering (LLM-first). Environment variable `OPENAI_MODEL` can override the default model.
 - **SQL Validation** (`utils.py`): Safety checks and SQL normalization
 - **Database Layer** (`db.py`): Async PostgreSQL operations with connection pooling
 - **Data Models** (`schemas.py`): Pydantic request/response schemas
 - **Data Loading** (`load_data.py`): CSV import and database population
 - **Database Setup** (`setup_db.py`): Database initialization script
+ - **Rule-based Fallback** (`nl_parser.py`): Lightweight parser for families/features/brands/price that compiles to safe SQL when the LLM path is unavailable or returns invalid SQL
 
 ## 📋 Prerequisites
 
@@ -105,6 +106,9 @@ Use services like:
 
    # PostgreSQL connection string
    DATABASE_URL=postgresql://postgres:postgres@localhost:5432/nl2sql
+
+   # Optional: override model (defaults to gpt-4o). Example values: gpt-4o, gpt-4o-mini
+   OPENAI_MODEL=gpt-4o
    ```
 
 2. **Get OpenAI API Key**:
@@ -140,16 +144,27 @@ This will:
 - Handle duplicates and data validation
 - Provide loading statistics
 
-### Database Schema
+### Database Schema (logical)
+
+The service expects a `products` table with at least these columns (superset supported):
 
 ```sql
 CREATE TABLE products (
-    sku TEXT PRIMARY KEY,
-    description TEXT,
-    price FLOAT,
-    currency TEXT,
-    family TEXT,
-    status TEXT
+   id UUID,
+   manufacturer_id UUID,
+   sku TEXT,
+   description TEXT,
+   price NUMERIC,
+   currency TEXT,
+   active BOOLEAN,
+   trained BOOLEAN,
+   raw JSONB,
+   created_at TIMESTAMP,
+   updated_at TIMESTAMP,
+   manufacturer_slug TEXT,
+   search_text TEXT,
+   product_number TEXT,
+   family TEXT
 );
 ```
 
@@ -187,7 +202,7 @@ Convert natural language to SQL and execute the query.
       "description": "5MP outdoor vandal resistant bullet camera",
       "price": 1299.0,
       "currency": "CAD",
-      "family": "camera",
+         "family": "Cameras",
       "status": "active"
     }
   ],
@@ -213,23 +228,18 @@ curl -X POST http://localhost:8000/query \
   -H "Content-Type: application/json" \
   -d '{"query": "What vandal resistant bullet cameras do you have?"}'
 
-# Status filtering
+# Manufacturer/brand preference
 curl -X POST http://localhost:8000/query \
-  -H "Content-Type: application/json" \
-  -d '{"query": "Show all active products with AI engine"}'
-
-# Manufacturer specific
-curl -X POST http://localhost:8000/query \
-  -H "Content-Type: application/json" \
-  -d '{"query": "List all Hanwha products"}'
+   -H "Content-Type: application/json" \
+   -d '{"query": "List Hanwha outdoor cameras"}'
 ```
 
-## 🔒 Security Features
+## 🔒 Security & safety
 
 - **SQL Injection Prevention**: GPT output is validated against a strict allowlist
 - **Read-Only Operations**: Only SELECT queries are permitted
 - **Table Restriction**: Queries limited to the `products` table only
-- **Result Limiting**: Maximum 10 results per query (configurable)
+- **Result Limiting**: Per-query LIMIT management; unions assumed to have per-SELECT LIMITs
 - **Input Validation**: Pydantic models ensure proper request structure
 
 ## 🧪 Testing
@@ -277,7 +287,10 @@ nl2sql-api/
 
 ### Modifying SQL Generation
 
-Edit the system prompt in `gpt.py` to change how queries are generated.
+Edit `SYSTEM_PROMPT` and few-shot examples in `gpt.py` to adjust the LLM output. The pipeline tries:
+1) LLM-generated SQL (normalized and validated)
+2) SKU/EAN fast-path (exact + fuzzy)
+3) Minimal rule-based fallback (families/features/brands/price)
 
 ### Extending the API
 
@@ -293,9 +306,9 @@ Add new endpoints in `main.py` following FastAPI patterns.
    - Verify port 5432 is not blocked
 
 2. **OpenAI API Errors**
-   - Check API key is valid
-   - Ensure sufficient credits
-   - Verify internet connection
+   - Check API key is valid (OPENAI_API_KEY)
+   - Optionally set OPENAI_MODEL (default: gpt-4o)
+   - Ensure sufficient credits and network access
 
 3. **Import Errors**
    - Run `pip install -r requirements.txt`
