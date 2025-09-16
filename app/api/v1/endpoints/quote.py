@@ -133,6 +133,7 @@ async def generate_quote(
     try:
         # 1) Extract intent
         intent = extract_intent(request.prompt)
+        print(intent)
         if not intent or 'items' not in intent:
             raise HTTPException(status_code=400, detail="Could not extract product requirements from prompt")
 
@@ -191,6 +192,15 @@ async def generate_quote(
                             original_request = desc
                         else:
                             original_request = f"{item_want.get('family', 'product')} (not found)"
+                elif best.get('_brand_fallback', False):
+                    # This item came from brand fallback (preferred brand not available)
+                    is_fallback = True
+                    # Extract brand preference info
+                    brand_prefs = item_want.get('brandPreference', [])
+                    if brand_prefs:
+                        original_request = f"Preferred brand: {', '.join(brand_prefs)} (not available)"
+                    else:
+                        original_request = "Preferred brand not available"
 
                 # Defensive family/bans were applied in retrieval; still ensure we don't pick obvious accessories
                 # (rare path if your DB contents change over time)

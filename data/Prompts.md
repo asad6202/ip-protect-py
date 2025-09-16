@@ -1,10 +1,7 @@
 Prompts
 #1 YEs
 
-I need 4 x PNB-A9092RLPH
-3 x NOP-IO168S
-8 x NOD-AX25S
-8 x NOC-RIMP
+I need 4 x PNB-A9092RLPH 3 x NOP-IO168S 8 x NOD-AX25S 8 x NOC-RIMP
 
 #2 NO
 Need 4 outdoor dome cameras with IR 30m and PoE. Add 1 NVR system with 16 channels. Include 1 PoE switch with 24 ports.
