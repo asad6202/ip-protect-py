@@ -269,6 +269,25 @@ class ProductRetrieval:
             params.append(float(budget["amount"]))
             where.append(f"price <= ${p}")
 
+        # ---- Brand preferences ----
+        pref, avoid = _brand_lists(want)
+        if pref:
+            # If brand preferences are specified, prioritize them
+            brand_sql = []
+            for brand in pref:
+                p += 1
+                params.append(f"%{brand}%")
+                brand_sql.append(f"LOWER(description) LIKE ${p}")
+            if brand_sql:
+                where.append("(" + " OR ".join(brand_sql) + ")")
+        
+        if avoid:
+            # Exclude avoided brands
+            for brand in avoid:
+                p += 1
+                params.append(f"%{brand}%")
+                where.append(f"LOWER(description) NOT LIKE ${p}")
+
         # ---- Soft tokens (OR) to rank within the valid set ----
         like_or = []
         for v in variants:
@@ -334,7 +353,9 @@ class ProductRetrieval:
                 ORDER BY embedding <=> $1
                 LIMIT $2
             """
-            rows = await self.conn.fetch(sql, emb, limit)
+            # Convert embedding list to string format for PostgreSQL
+            emb_str = '[' + ','.join(map(str, emb)) + ']'
+            rows = await self.conn.fetch(sql, emb_str, limit)
             return [dict(r) for r in rows]
         except Exception as e:
             print(f"Vector search failed: {e}")
@@ -396,14 +417,20 @@ class ProductRetrieval:
             if rows:
                 return [dict(rows[0])]
             
-            # Try description match (description contains the SKU)
+            # Try description match with better prioritization
             sql = """
-                SELECT sku, description, price, currency, family, active
+                SELECT sku, description, price, currency, family, active,
+                       CASE 
+                           WHEN LOWER(description) LIKE LOWER($1 || '%') THEN 1
+                           WHEN LOWER(description) LIKE LOWER('%' || $1 || '%') THEN 2
+                           ELSE 3
+                       END as priority
                 FROM products
-                WHERE active = true AND LOWER(description) LIKE LOWER($1)
+                WHERE active = true AND LOWER(description) LIKE LOWER($2)
+                ORDER BY priority ASC, sku ASC
                 LIMIT 1
             """
-            rows = await self.conn.fetch(sql, f"%{sku}%")
+            rows = await self.conn.fetch(sql, sku, f"%{sku}%")
             if rows:
                 return [dict(rows[0])]
 
@@ -432,14 +459,19 @@ class ProductRetrieval:
         have_hard = (fam == "nvr" and want.get("requiredChannels")) or (fam == "switch" and want.get("requiredPorts"))
         used_vector_fallback = False
         if not have_hard and len(results) < 3:
-            vf = await self.vector_fallback(want, prompt, limit=20)
-            seen = {r['sku'] for r in results}
-            for r in vf:
-                if r['sku'] not in seen:
-                    r['_used_vector_fallback'] = True  # Mark vector fallback items
-                    results.append(r)
-                    seen.add(r['sku'])
-                    used_vector_fallback = True
+            try:
+                vf = await self.vector_fallback(want, prompt, limit=20)
+                if vf:  # Only add results if vector fallback actually returned something
+                    seen = {r['sku'] for r in results}
+                    for r in vf:
+                        if r['sku'] not in seen:
+                            r['_used_vector_fallback'] = True  # Mark vector fallback items
+                            results.append(r)
+                            seen.add(r['sku'])
+                            used_vector_fallback = True
+            except Exception as e:
+                # If vector fallback fails (e.g., embedding column doesn't exist), just skip it
+                print(f"Vector fallback skipped: {e}")
 
         # Mark all results with fallback info
         for r in results:
