@@ -37,7 +37,9 @@
           <tr>
             <th>sku</th>
             <th>description</th>
-            <th>price</th>
+            <th>quantity</th>
+            <th>unit cost</th>
+            <th>total price</th>
             <th>currency</th>
             <th>family</th>
             <th>status</th>
@@ -121,14 +123,20 @@
 
         if (Array.isArray(data.results)) {
           if (data.results.length === 0) {
-            resultsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Items not found</td></tr>';
+            resultsBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Items not found</td></tr>';
           } else {
             for (const row of data.results) {
+              const quantity = row.quantity || 1;
+              const unitCost = parseFloat(row.price) || 0;
+              const totalPrice = (unitCost * quantity).toFixed(2);
+              
               const tr = document.createElement('tr');
               tr.innerHTML = `
                 <td>${row.sku ?? ''}</td>
                 <td title="${row.description ?? ''}">${(row.description || '').slice(0, 120)}</td>
-                <td>${row.price ?? ''}</td>
+                <td>${quantity}</td>
+                <td>${unitCost.toFixed(2)}</td>
+                <td>${totalPrice}</td>
                 <td>${row.currency ?? ''}</td>
                 <td>${row.family ?? ''}</td>
                 <td>${row.status ?? ''}</td>
