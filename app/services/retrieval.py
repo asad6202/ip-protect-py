@@ -19,7 +19,7 @@ import asyncpg
 
 FAMILY_MAP = {
     "camera": ["camera", "cameras", "dome", "bullet", "ptz", "turret", "sensor unit"],
-    "nvr":    ["nvr", "recorder", "network video recorder"],
+    "nvr":    ["nvr", "recorder", "network video recorder", "server", "servers"],
     "switch": ["switch", "poe switch", "poe+ switch"],
 }
 
@@ -30,7 +30,7 @@ FAMILY_MUST = {
         "dome camera", "bullet camera", "ptz camera", "turret camera",
         "outdoor camera", "indoor camera", "day/night camera", "day night camera"
     ],
-    "nvr":    ["nvr", "recorder", "network video recorder", "digital video recorder"],
+    "nvr":    ["nvr", "recorder", "network video recorder", "digital video recorder", "server", "video server"],
     "switch": ["switch", "network switch", "poe switch", "ethernet switch"],
 }
 # Stronger bans to keep out accessories/licenses/mounts/etc.
@@ -387,12 +387,12 @@ class ProductRetrieval:
     async def search_products(self, want: Dict[str, Any], prompt: str) -> List[Dict[str, Any]]:
         """
         Main search method:
-        - If explicit SKU, return it
+        - If explicit SKU, return it (exact match only)
         - If vague camera → cheapest physical camera
         - Else deterministic search
-        - If weak results, vector fallback
+        - No fallback - return empty if no exact matches
         """
-        # 1) Exact SKU?
+        # 1) Exact SKU? (Try exact match first, then description search)
         sku = (want.get("sku") or "").strip()
         if sku:
             # Try exact SKU match first
@@ -417,25 +417,31 @@ class ProductRetrieval:
             if rows:
                 return [dict(rows[0])]
             
-            # Try description match with better prioritization
+            # Try description match (SKU mentioned in description)
             sql = """
-                SELECT sku, description, price, currency, family, active,
-                       CASE 
-                           WHEN LOWER(description) LIKE LOWER($1 || '%') THEN 1
-                           WHEN LOWER(description) LIKE LOWER('%' || $1 || '%') THEN 2
-                           ELSE 3
-                       END as priority
+                SELECT sku, description, price, currency, family, active
                 FROM products
-                WHERE active = true AND LOWER(description) LIKE LOWER($2)
-                ORDER BY priority ASC, sku ASC
+                WHERE active = true AND LOWER(description) LIKE LOWER($1)
+                ORDER BY 
+                    CASE 
+                        WHEN LOWER(description) LIKE LOWER($1 || '%') THEN 1
+                        WHEN LOWER(description) LIKE LOWER('%' || $1 || '%') THEN 2
+                        ELSE 3
+                    END,
+                    sku ASC
                 LIMIT 1
             """
-            rows = await self.conn.fetch(sql, sku, f"%{sku}%")
+            rows = await self.conn.fetch(sql, f"%{sku}%")
             if rows:
                 return [dict(rows[0])]
+            
+            # If specific SKU requested but not found anywhere, return empty
+            return []
 
         # 2) Derive hard constraints from prompt if missing (so intent bugs can't break constraints)
-        fam = (want.get("family") or "").lower()
+        # First normalize the family, then use the normalized value
+        raw_family = want.get("family")
+        fam = _normalize_family(raw_family, want) or (want.get("family") or "").lower()
         want = dict(want)  # copy so we can add constraints
         if fam == "nvr" and not want.get("requiredChannels"):
             m = re.search(r"\b(\d{1,3})\s*chan(nel)?s?\b", prompt, flags=re.I)
@@ -452,31 +458,61 @@ class ProductRetrieval:
             if cheapest:
                 return cheapest
 
-        # 4) Deterministic
+        # 4) Deterministic search - but only if we have meaningful search criteria
+        # Check if we have enough specific criteria to warrant a search
+        has_specific_criteria = False
+        
+        # Always allow search for NVR/server family (they are valid products even without specific features)
+        if fam == "nvr":
+            has_specific_criteria = True
+        
+        # Check for specific features that would indicate a real search
+        if want.get("features"):
+            # Look for specific technical features
+            specific_features = ["outdoor", "indoor", "poe", "poe+", "ir-30m", "ir-60m", "4k", "1080p", "vandal", "audio"]
+            if any(feature in [f.lower() for f in want.get("features", [])] for feature in specific_features):
+                has_specific_criteria = True
+        
+        # Check for form factor
+        if want.get("formFactor") and want.get("formFactor").lower() in ["dome", "bullet", "ptz", "turret"]:
+            has_specific_criteria = True
+        
+        # Check for location
+        if want.get("location") and want.get("location").lower() in ["outdoor", "indoor"]:
+            has_specific_criteria = True
+        
+        # Check for specific requirements
+        if want.get("requiredChannels") or want.get("requiredPorts"):
+            has_specific_criteria = True
+        
+        # Only search if we have specific criteria
+        if not has_specific_criteria:
+            return []
+        
         results = await self.deterministic_search(want, limit=50)
 
-        # 5) Vector fallback if few results (but not if we have hard constraints)
-        have_hard = (fam == "nvr" and want.get("requiredChannels")) or (fam == "switch" and want.get("requiredPorts"))
-        used_vector_fallback = False
-        if not have_hard and len(results) < 3:
-            try:
-                vf = await self.vector_fallback(want, prompt, limit=20)
-                if vf:  # Only add results if vector fallback actually returned something
-                    seen = {r['sku'] for r in results}
-                    for r in vf:
-                        if r['sku'] not in seen:
-                            r['_used_vector_fallback'] = True  # Mark vector fallback items
-                            results.append(r)
-                            seen.add(r['sku'])
-                            used_vector_fallback = True
-            except Exception as e:
-                # If vector fallback fails (e.g., embedding column doesn't exist), just skip it
-                print(f"Vector fallback skipped: {e}")
+        # 5) Vector fallback if few results (but not if we have hard constraints) - COMMENTED OUT
+        # have_hard = (fam == "nvr" and want.get("requiredChannels")) or (fam == "switch" and want.get("requiredPorts"))
+        # used_vector_fallback = False
+        # if not have_hard and len(results) < 3:
+        #     try:
+        #         vf = await self.vector_fallback(want, prompt, limit=20)
+        #         if vf:  # Only add results if vector fallback actually returned something
+        #             seen = {r['sku'] for r in results}
+        #             for r in vf:
+        #                 if r['sku'] not in seen:
+        #                     r['_used_vector_fallback'] = True  # Mark vector fallback items
+        #                     results.append(r)
+        #                     seen.add(r['sku'])
+        #                     used_vector_fallback = True
+        #     except Exception as e:
+        #         # If vector fallback fails (e.g., embedding column doesn't exist), just skip it
+        #         print(f"Vector fallback skipped: {e}")
 
         # Mark all results with fallback info
         for r in results:
-            r['_used_vector_fallback'] = r.get('_used_vector_fallback', False)
-            r['_used_any_fallback'] = used_vector_fallback
+            r['_used_vector_fallback'] = False  # Always false since fallback is disabled
+            r['_used_any_fallback'] = False
 
         return results
 

@@ -272,7 +272,7 @@ Return a JSON object with:
 - items[]: for each requested line item
   - quantity: integer >=1 (default 1 if not stated)
   - sku: exact string if provided (model/SKU/EAN/UPC), else null
-  - family: free-form category (e.g., camera, nvr, switch, mount, storage, cable, monitor, other)
+  - family: free-form category (e.g., camera, nvr, server, switch, mount, storage, cable, monitor, other)
   - formFactor: free-form (e.g., dome, bullet, ptz, turret, mini-dome, box, any)
   - location: free-form (indoor, outdoor, any)
   - features[]: normalized tokens (poe, poe+, ir-30m, ir-60m, vandal, audio, h265, h264, 4k, 1080p, 720p, wifi, varifocal, fixed, night-vision)

@@ -10,17 +10,37 @@ async def check_schema():
     dsn = os.getenv('DATABASE_URL')
     conn = await asyncpg.connect(dsn)
     
-    # Check if embedding column exists
-    result = await conn.fetch('''
-        SELECT column_name, data_type 
-        FROM information_schema.columns 
-        WHERE table_name = 'products'
-        ORDER BY ordinal_position
+    # Check all existing tables
+    tables = await conn.fetch('''
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public'
+        ORDER BY table_name
     ''')
     
-    print('Products table columns:')
-    for row in result:
-        print(f'  {row["column_name"]}: {row["data_type"]}')
+    print('Existing tables:')
+    for row in tables:
+        print(f'  - {row["table_name"]}')
+    
+    # Check if products table exists and show its structure
+    products_exists = await conn.fetch('''
+        SELECT EXISTS (
+            SELECT 1 FROM information_schema.tables 
+            WHERE table_name = 'products' AND table_schema = 'public'
+        )
+    ''')
+    
+    if products_exists[0]['exists']:
+        result = await conn.fetch('''
+            SELECT column_name, data_type 
+            FROM information_schema.columns 
+            WHERE table_name = 'products'
+            ORDER BY ordinal_position
+        ''')
+        
+        print('\nProducts table columns:')
+        for row in result:
+            print(f'  {row["column_name"]}: {row["data_type"]}')
     
     # Check if vector extension is available
     extensions = await conn.fetch('''

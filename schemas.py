@@ -22,25 +22,74 @@ class QueryResponse(BaseModel):
 class QuoteRequest(BaseModel):
     """Request for quote generation."""
     prompt: str = Field(..., min_length=1, description="Natural language description of camera/accessory needs")
+    title: Optional[str] = Field(None, description="Optional title for the quote")
 
 
-class QuoteItem(BaseModel):
-    """Individual item in a quote."""
+class QuoteItemRequest(BaseModel):
+    """Individual item in a quote request."""
     sku: str
     description: str
     quantity: int
     unit_price: float
     currency: str
     subtotal: float
-    is_fallback: Optional[bool] = False
-    original_request: Optional[str] = None  # What was originally requested
+    product_id: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+    position: Optional[int] = None
 
 
 class QuoteResponse(BaseModel):
     """Response containing generated quote."""
-    items: List[QuoteItem]
-    total: float
-    currency: str
+    id: str
+    title: Optional[str] = None
+    prompt: str
+    extracted_intent: Optional[Dict[str, Any]] = None
+    currency: Optional[str] = None
+    total_amount: Optional[float] = None
     notes: Optional[str] = None
+    status: str
+    created_at: str
+    updated_at: str
+    items: List[QuoteItemRequest]
+
+
+class QuoteItemResponse(BaseModel):
+    """Individual item in a quote response."""
+    id: str
+    sku: str
+    description: str
+    quantity: int
+    unit_price: float
+    currency: str
+    subtotal: float
+    product_id: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+    position: Optional[int] = None
+    created_at: str
+
+
+class QuoteListResponse(BaseModel):
+    """Response for listing quotes."""
+    quotes: List[QuoteResponse]
+    total: int
+
+
+class QuoteFeedbackRequest(BaseModel):
+    """Request for quote feedback."""
+    rating: Optional[int] = Field(None, ge=1, le=5, description="Rating from 1 to 5")
+    comment: Optional[str] = None
+    labels: Optional[Dict[str, Any]] = None
+    corrections: Optional[Dict[str, Any]] = None
+
+
+class QuoteFeedbackResponse(BaseModel):
+    """Response for quote feedback."""
+    id: str
+    quote_id: str
+    rating: Optional[int] = None
+    comment: Optional[str] = None
+    labels: Optional[Dict[str, Any]] = None
+    corrections: Optional[Dict[str, Any]] = None
+    created_at: str
 
 
