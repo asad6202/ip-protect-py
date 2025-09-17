@@ -23,7 +23,6 @@ wheels/
 *.whl
 
 # Environments
-.env
 .venv
 env/
 venv/
@@ -32,7 +31,6 @@ env.bak/
 venv.bak/
 
 # Editors and IDEs
-.vscode/
 .idea/
 *.swp
 *.bak
@@ -58,3 +56,5 @@ docs/_build/
 *.sqlite3 # For Django projects, if using SQLite
 instance/ # Flask specific
 celerybeat-schedule # Celery specific
+config.bat
+node_modules
