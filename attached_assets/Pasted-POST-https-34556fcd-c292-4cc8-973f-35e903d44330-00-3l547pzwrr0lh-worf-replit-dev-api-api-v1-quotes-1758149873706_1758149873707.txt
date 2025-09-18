@@ -1,0 +1,24 @@
+POST https://34556fcd-c292-4cc8-973f-35e903d44330-00-3l547pzwrr0lh.worf.replit.dev/api/api/v1/quotes 405
+
+Request Data
+
+{"prompt":"","currency":"CAD","items":[{"sku":"PNB-A9092RLPH","description":"4K Regular Speed (up to 74MPH)  LPR Box Camera Kit with Enclosure and IR, Licensed with Wisenet Road AI. Max. 4K resolution, 12-50 mm lens, H.265/H.264/MJPEG codec, WiseStream III, Includes PoE+ Camera enclosure with Wall mount and IR  LPR + MMCR: Make, Model & Color* Recognition on the Edge, 32GB Micro SD storage for up to 10,000 LPR/Vehicle images, Licensed open platform application for multiple regions/countries (USA, Canada, Mexico, Brazil, Uruguay, Paraguay, Argentina, Colombia, Chile) (* Color recognition only during day time)","quantity":4,"unit_price":6078.4,"currency":"CAD","subtotal":24313.6,"product_id":"56fb7e37-049d-4642-b957-d9881db5eaf6","metadata":{"is_fallback":false,"search_method":"deterministic","original_request":"PNB-A9092RLPH"},"position":0},{"sku":"NOP-IO168S","description":"Access control I/O expansion panel with (16) high-precision supervised inputs and (8) Form-C relay outputs for auxiliary device and zone control, equipped with advanced filtering to minimize false alarms. Secure serial communication with NOP Series IC controllers ensures encrypted data transfer, advanced access control abiliites, and elevator support. Power input 12/24VDC. Enclosure-Mount Form Factor Design","quantity":3,"unit_price":1860.2,"currency":"CAD","subtotal":5580.6,"product_id":"b85cc38b-2932-4ee1-b9af-6ecbdb258d33","metadata":{"is_fallback":false,"search_method":"deterministic","original_request":"NOP-IO168S"},"position":1},{"sku":"NOD-AX25S","description":"Multi-technology single gang keypad reader, 13.56 MHz (NFC), 125 kHz (PROX), Bluetooth BLE 5.3, Auto-Detect for Wiegand or OSDP infrastructures, Remote firmware upgrade support for radio enable/disable and control sequencing, Supports all Ethos-supported credentials (NFC, PROX, Bluetooth), 10-key mechanical keypad, Accelerometer-based tamper detection, Typical read range: 2 inches, EAL6+ Secure Element, IP65 or better, Power: 5–24 VDC, Current draw: 500 mA @ 12 VDC, Dimensions: 5.25\" x 3.29\" x 0.93\" (133.4mm x 83.6mm x 23.5mm), Regulatory compliance: FCC, IC, CE, UL294, OSDP Verified V2.2, Plastics: UL94-V0, UL746C-F1 for UV/water resistance, Lifetime warranty, Made in USA","quantity":8,"unit_price":1152.8,"currency":"CAD","subtotal":9222.4,"product_id":"80b82342-e038-4575-a23d-c6cb1ed28978","metadata":{"is_fallback":false,"search_method":"deterministic","original_request":"NOD-AX25S"},"position":2},{"sku":"NOC-RIMP","description":"Auxiliary metal mounting bracket with standoffs designed for secure installation of the NOP-RI2MS in a standard triple-gang box. Dimensions of 5.5\" × 3.63\" × 0.5\" (139.7mm × 92.2mm × 12.7mm).","quantity":8,"unit_price":98.25,"currency":"CAD","subtotal":786,"product_id":"bbd8f5c3-93aa-47d6-b2a2-185c8b62a1d8","metadata":{"is_fallback":false,"search_method":"deterministic","original_request":"NOC-RIMP"},"position":3}]}
+
+Request Headers
+
+Accept: application/json, text/plain, */*
+Content-Type: application/json
+
+Response Headers
+
+access-control-allow-origin: *
+allow: GET
+content-length: 31
+content-type: application/json
+date: Wed, 17 Sep 2025 22
+replit-cluster: worf
+server: uvicorn
+vary: Origin
+x-robots-tag: none, noindex, noarchive, nofollow, nositelinkssearchbox, noimageindex, none, noindex, noarchive, nofollow, nositelinkssearchbox, noimageindex
+
+{"detail":"Method Not Allowed"}

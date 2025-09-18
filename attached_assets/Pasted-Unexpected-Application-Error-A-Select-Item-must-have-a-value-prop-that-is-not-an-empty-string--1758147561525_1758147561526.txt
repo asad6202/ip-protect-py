@@ -1,0 +1,16 @@
+Unexpected Application Error!
+A <Select.Item /> must have a value prop that is not an empty string. This is because the Select value can be set to an empty string to clear the selection and show the placeholder.
+Error: A <Select.Item /> must have a value prop that is not an empty string. This is because the Select value can be set to an empty string to clear the selection and show the placeholder.
+    at https://34556fcd-c292-4cc8-973f-35e903d44330-00-3l547pzwrr0lh.worf.replit.dev/node_modules/.vite/deps/@radix-ui_react-select.js?v=69023747:3104:13
+    at renderWithHooks (https://34556fcd-c292-4cc8-973f-35e903d44330-00-3l547pzwrr0lh.worf.replit.dev/node_modules/.vite/deps/chunk-WERSD76P.js?v=69023747:11548:26)
+    at updateForwardRef (https://34556fcd-c292-4cc8-973f-35e903d44330-00-3l547pzwrr0lh.worf.replit.dev/node_modules/.vite/deps/chunk-WERSD76P.js?v=69023747:14325:28)
+    at beginWork (https://34556fcd-c292-4cc8-973f-35e903d44330-00-3l547pzwrr0lh.worf.replit.dev/node_modules/.vite/deps/chunk-WERSD76P.js?v=69023747:15946:22)
+    at beginWork$1 (https://34556fcd-c292-4cc8-973f-35e903d44330-00-3l547pzwrr0lh.worf.replit.dev/node_modules/.vite/deps/chunk-WERSD76P.js?v=69023747:19753:22)
+    at performUnitOfWork (https://34556fcd-c292-4cc8-973f-35e903d44330-00-3l547pzwrr0lh.worf.replit.dev/node_modules/.vite/deps/chunk-WERSD76P.js?v=69023747:19198:20)
+    at workLoopSync (https://34556fcd-c292-4cc8-973f-35e903d44330-00-3l547pzwrr0lh.worf.replit.dev/node_modules/.vite/deps/chunk-WERSD76P.js?v=69023747:19137:13)
+    at renderRootSync (https://34556fcd-c292-4cc8-973f-35e903d44330-00-3l547pzwrr0lh.worf.replit.dev/node_modules/.vite/deps/chunk-WERSD76P.js?v=69023747:19116:15)
+    at recoverFromConcurrentError (https://34556fcd-c292-4cc8-973f-35e903d44330-00-3l547pzwrr0lh.worf.replit.dev/node_modules/.vite/deps/chunk-WERSD76P.js?v=69023747:18736:28)
+    at performSyncWorkOnRoot (https://34556fcd-c292-4cc8-973f-35e903d44330-00-3l547pzwrr0lh.worf.replit.dev/node_modules/.vite/deps/chunk-WERSD76P.js?v=69023747:18879:28)
+💿 Hey developer 👋
+
+You can provide a way better UX than this when your app throws errors by providing your own ErrorBoundary or errorElement prop on your route.

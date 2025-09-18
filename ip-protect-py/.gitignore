@@ -1,0 +1,60 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyd
+*.pyo
+*.egg-info/
+.eggs/
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg
+*.whl
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Editors and IDEs
+.vscode/
+.idea/
+*.swp
+*.bak
+*.swo
+*~
+.DS_Store # macOS specific
+Thumbs.db # Windows specific
+
+# Unit test / coverage reports
+.coverage
+.tox/
+htmlcov/
+.pytest_cache/
+
+# Sphinx documentation
+docs/_build/
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# Miscellaneous
+*.log
+*.sqlite3 # For Django projects, if using SQLite
+instance/ # Flask specific
+celerybeat-schedule # Celery specific
