@@ -1,0 +1,19 @@
+modules = ["nodejs-20", "python-3.11"]
+
+[nix]
+channel = "stable-24_05"
+
+[workflows]
+runButton = "Project"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[[ports]]
+localPort = 8000
+externalPort = 8000
+
+[deployment]
+run = ["sh", "-c", "cd frontend && npm run build && cd .. && python main.py"]
+deploymentTarget = "gce"
