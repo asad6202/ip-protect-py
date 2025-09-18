@@ -289,7 +289,7 @@ export default function ProductListPage() {
                 selectedFamily !== "all" ||
                 selectedBrand !== "all" ||
                 accessoryFilter !== "all") && (
-                <Button variant="outline" size="sm" onClick={clearFilters}>
+                <Button size="sm" className="btn-protect-outline" onClick={clearFilters}>
                   <X className="mr-2 h-4 w-4" />
                   Clear
                 </Button>
@@ -394,9 +394,8 @@ export default function ProductListPage() {
                           <TableCell className="text-right py-3">
                             <Button
                               asChild
-                              variant="outline"
                               size="sm"
-                              className="h-8 text-xs"
+                              className="h-8 text-xs btn-protect-outline"
                             >
                               <Link to={`/products/${product.id}`}>
                                 <Eye className="mr-1.5 h-3.5 w-3.5" />
@@ -424,11 +423,10 @@ export default function ProductListPage() {
                     </div>
                     <div className="flex items-center space-x-2">
                       <Button
-                        variant="outline"
                         size="sm"
                         onClick={() => setPage(Math.max(1, page - 1))}
                         disabled={page === 1}
-                        className="h-8"
+                        className="h-8 btn-protect-outline"
                       >
                         Previous
                       </Button>
@@ -443,7 +441,7 @@ export default function ProductListPage() {
                               variant={pageNum === page ? "default" : "outline"}
                               size="sm"
                               onClick={() => setPage(pageNum)}
-                              className="h-8 w-8 p-0"
+                              className={`h-8 w-8 p-0 ${pageNum === page ? "bg-protect-red text-white hover:bg-protect-red-dark" : "btn-protect-outline"}`}
                             >
                               {pageNum}
                             </Button>
@@ -451,11 +449,10 @@ export default function ProductListPage() {
                         })}
                       </div>
                       <Button
-                        variant="outline"
                         size="sm"
                         onClick={() => setPage(Math.min(totalPages, page + 1))}
                         disabled={page === totalPages}
-                        className="h-8"
+                        className="h-8 btn-protect-outline"
                       >
                         Next
                       </Button>

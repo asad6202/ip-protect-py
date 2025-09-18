@@ -4,48 +4,66 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222.2 84% 4.9%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222.2 84% 4.9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    /* Protect-IP Color Scheme - Actual Brand Colors */
+    --background: 0 0% 100%; /* White #FFFFFF */
+    --foreground: 0 0% 0%; /* Black #000000 */
+    --card: 0 0% 100%; /* White #FFFFFF */
+    --card-foreground: 0 0% 0%; /* Black #000000 */
+    --popover: 0 0% 100%; /* White #FFFFFF */
+    --popover-foreground: 0 0% 0%; /* Black #000000 */
+    --primary: 355 75% 45%; /* Protect-IP Red #d01920 */
+    --primary-foreground: 0 0% 100%; /* White #FFFFFF */
+    --secondary: 0 0% 96%; /* Light Grey #F5F5F5 */
+    --secondary-foreground: 0 0% 0%; /* Black #000000 */
+    --muted: 0 0% 96%; /* Light Grey #F5F5F5 */
+    --muted-foreground: 0 0% 46%; /* Medium Grey #767676 */
+    --accent: 0 0% 96%; /* Light Grey #F5F5F5 */
+    --accent-foreground: 0 0% 0%; /* Black #000000 */
+    --destructive: 0 84.2% 60.2%; /* Error Red #EF4444 */
+    --destructive-foreground: 0 0% 100%; /* White #FFFFFF */
+    --border: 0 0% 90%; /* Light border #E5E5E5 */
+    --input: 0 0% 90%; /* Light border #E5E5E5 */
+    --ring: 355 75% 45%; /* Protect-IP Red #d01920 */
     --radius: 0.5rem;
+    
+    /* Protect-IP Actual Brand Colors */
+    --protect-red: 355 75% 45%; /* Protect-IP Red #d01920 */
+    --protect-red-dark: 355 75% 35%; /* Darker Red #a0141a */
+    --protect-red-light: 355 75% 55%; /* Lighter Red #e01d26 */
+    --protect-white: 0 0% 100%; /* White #FFFFFF */
+    --protect-black: 0 0% 0%; /* Black #000000 */
+    --protect-light-grey: 0 0% 96%; /* Light Grey #F5F5F5 */
+    --protect-medium-grey: 0 0% 46%; /* Medium Grey #767676 */
+    --protect-dark-grey: 0 0% 20%; /* Dark Grey/Charcoal #333333 */
+    --protect-gray-light: 0 0% 90%; /* Gray Light #E5E5E5 */
+    
+    /* Status Colors */
+    --protect-success: 142 76% 36%; /* Success Green #10B981 */
+    --protect-warning: 38 92% 50%; /* Warning Orange #F59E0B */
+    --protect-error: 0 84% 60%; /* Error Red #EF4444 */
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 84% 4.9%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    /* Protect-IP Dark Mode - Navy-based */
+    --background: 210 100% 10%; /* Dark Navy Blue #0C1E33 */
+    --foreground: 0 0% 100%; /* White */
+    --card: 210 100% 10%; /* Dark Navy Blue #0C1E33 */
+    --card-foreground: 0 0% 100%; /* White */
+    --popover: 210 100% 10%; /* Dark Navy Blue #0C1E33 */
+    --popover-foreground: 0 0% 100%; /* White */
+    --primary: 195 100% 47%; /* Bright Cyan Blue #00AEEF */
+    --primary-foreground: 210 100% 10%; /* Dark Navy Blue #0C1E33 */
+    --secondary: 210 100% 15%; /* Slightly lighter navy */
+    --secondary-foreground: 0 0% 100%; /* White */
+    --muted: 210 100% 15%; /* Slightly lighter navy */
+    --muted-foreground: 0 0% 70%; /* Light grey for text */
+    --accent: 210 100% 15%; /* Slightly lighter navy */
+    --accent-foreground: 0 0% 100%; /* White */
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 94.1%;
+    --destructive-foreground: 0 0% 100%; /* White */
+    --border: 210 100% 20%; /* Navy border */
+    --input: 210 100% 20%; /* Navy border */
+    --ring: 195 100% 47%; /* Bright Cyan Blue #00AEEF */
   }
 }
 
@@ -55,5 +73,165 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  /* Protect-IP Brand Color Utilities - Red Theme */
+  
+  /* Red Colors */
+  .bg-protect-red {
+    background-color: hsl(var(--protect-red));
+  }
+  .text-protect-red {
+    color: hsl(var(--protect-red));
+  }
+  .bg-protect-red-dark {
+    background-color: hsl(var(--protect-red-dark));
+  }
+  .text-protect-red-dark {
+    color: hsl(var(--protect-red-dark));
+  }
+  .bg-protect-red-light {
+    background-color: hsl(var(--protect-red-light));
+  }
+  .text-protect-red-light {
+    color: hsl(var(--protect-red-light));
+  }
+  
+  /* Black Colors */
+  .bg-protect-black {
+    background-color: hsl(var(--protect-black));
+  }
+  .text-protect-black {
+    color: hsl(var(--protect-black));
+  }
+  
+  /* Neutral Colors */
+  .bg-protect-white {
+    background-color: hsl(var(--protect-white));
+  }
+  .text-protect-white {
+    color: hsl(var(--protect-white));
+  }
+  .bg-protect-light-grey {
+    background-color: hsl(var(--protect-light-grey));
+  }
+  .text-protect-light-grey {
+    color: hsl(var(--protect-light-grey));
+  }
+  .bg-protect-medium-grey {
+    background-color: hsl(var(--protect-medium-grey));
+  }
+  .text-protect-medium-grey {
+    color: hsl(var(--protect-medium-grey));
+  }
+  .bg-protect-dark-grey {
+    background-color: hsl(var(--protect-dark-grey));
+  }
+  .text-protect-dark-grey {
+    color: hsl(var(--protect-dark-grey));
+  }
+  .bg-protect-gray-light {
+    background-color: hsl(var(--protect-gray-light));
+  }
+  .text-protect-gray-light {
+    color: hsl(var(--protect-gray-light));
+  }
+  
+  /* Status Colors */
+  .bg-protect-success {
+    background-color: hsl(var(--protect-success));
+  }
+  .text-protect-success {
+    color: hsl(var(--protect-success));
+  }
+  .bg-protect-warning {
+    background-color: hsl(var(--protect-warning));
+  }
+  .text-protect-warning {
+    color: hsl(var(--protect-warning));
+  }
+  .bg-protect-error {
+    background-color: hsl(var(--protect-error));
+  }
+  .text-protect-error {
+    color: hsl(var(--protect-error));
+  }
+  
+  /* Border utilities */
+  .border-protect-red {
+    border-color: hsl(var(--protect-red));
+  }
+  .border-protect-black {
+    border-color: hsl(var(--protect-black));
+  }
+  .border-protect-gray-light {
+    border-color: hsl(var(--protect-gray-light));
+  }
+  
+  /* Hover states */
+  .hover\:bg-protect-red:hover {
+    background-color: hsl(var(--protect-red));
+  }
+  .hover\:text-protect-red:hover {
+    color: hsl(var(--protect-red));
+  }
+  .hover\:bg-protect-red-light:hover {
+    background-color: hsl(var(--protect-red-light));
+  }
+  .hover\:text-protect-red-light:hover {
+    color: hsl(var(--protect-red-light));
+  }
+  .hover\:bg-protect-red-dark:hover {
+    background-color: hsl(var(--protect-red-dark));
+  }
+  .hover\:text-protect-red-dark:hover {
+    color: hsl(var(--protect-red-dark));
+  }
+  .hover\:bg-protect-black:hover {
+    background-color: hsl(var(--protect-black));
+  }
+  .hover\:text-protect-black:hover {
+    color: hsl(var(--protect-black));
+  }
+  
+  /* Focus states */
+  .focus\:border-protect-red:focus {
+    border-color: hsl(var(--protect-red));
+  }
+  .focus\:ring-protect-red:focus {
+    --tw-ring-color: hsl(var(--protect-red) / 0.2);
+  }
+  
+  /* Shadow utilities */
+  .shadow-protect-red {
+    box-shadow: 0 4px 12px hsl(var(--protect-red) / 0.3);
+  }
+  .shadow-protect-black {
+    box-shadow: 0 4px 12px hsl(var(--protect-black) / 0.2);
+  }
+  
+  /* Custom Button Styles */
+  .btn-protect-outline {
+    background-color: hsl(var(--protect-white));
+    color: hsl(var(--protect-red));
+    border: 2px solid hsl(var(--protect-red));
+    border-radius: 0;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.2s ease-in-out;
+  }
+  
+  .btn-protect-outline:hover {
+    background-color: hsl(var(--protect-red));
+    color: hsl(var(--protect-white));
+    border-color: hsl(var(--protect-red));
+  }
+  
+  .btn-protect-outline:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px hsl(var(--protect-red) / 0.2);
   }
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { Button } from './ui/button'
+import Logo from './Logo'
 import { 
   Home, 
   Package, 
@@ -30,19 +31,25 @@ export default function Layout() {
     <div className="h-screen bg-background">
       {/* Sidebar */}
       <div className={cn(
-        "fixed inset-y-0 left-0 z-50 bg-card border-r transition-all duration-300 ease-in-out",
+        "fixed inset-y-0 left-0 z-50 bg-protect-white border-r border-protect-gray-light transition-all duration-300 ease-in-out",
         collapsed ? "w-16" : "w-64"
       )}>
         <div className="flex h-full flex-col">
-          <div className="flex h-16 items-center justify-between px-3 border-b">
+          <div className={cn(
+            "flex h-16 items-center border-b border-protect-gray-light",
+            collapsed ? "justify-center px-2" : "justify-between px-3"
+          )}>
             {!collapsed && (
-              <h1 className="text-xl font-bold ml-3">IP Protect</h1>
+              <Logo size="md" />
             )}
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setCollapsed(!collapsed)}
-              className="ml-auto"
+              className={cn(
+                "text-protect-black hover:bg-protect-red hover:text-protect-white",
+                collapsed ? "ml-0" : "ml-auto"
+              )}
             >
               {collapsed ? (
                 <Menu className="h-5 w-5" />
@@ -60,11 +67,11 @@ export default function Layout() {
                   key={item.name}
                   to={item.href}
                   className={cn(
-                    'flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors',
-                    'group relative',
+                    'flex items-center text-sm font-medium rounded-md transition-colors group relative',
+                    collapsed ? 'justify-center px-2 py-2' : 'px-3 py-2',
                     isActive
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                      ? 'bg-protect-red text-protect-white'
+                      : 'text-protect-black hover:bg-protect-red hover:text-protect-white'
                   )}
                   title={collapsed ? item.name : undefined}
                 >
@@ -78,7 +85,7 @@ export default function Layout() {
                     </span>
                   )}
                   {collapsed && (
-                    <div className="absolute left-full ml-2 px-2 py-1 bg-popover text-popover-foreground rounded-md text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 whitespace-nowrap border shadow-md">
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-protect-black text-protect-white rounded-md text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 whitespace-nowrap border border-protect-gray-light shadow-md">
                       {item.name}
                     </div>
                   )}

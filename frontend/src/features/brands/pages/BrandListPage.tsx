@@ -34,7 +34,7 @@ export default function BrandListPage() {
           title="Brands" 
           description="Manage product brands"
           children={
-            <Button onClick={() => setShowForm(true)}>
+            <Button onClick={() => setShowForm(true)} className="btn-protect-outline">
               <Plus className="mr-2 h-4 w-4" />
               New Brand
             </Button>
@@ -61,7 +61,7 @@ export default function BrandListPage() {
           title="Brands" 
           description="Manage product brands"
           children={
-            <Button onClick={() => setShowForm(true)}>
+            <Button onClick={() => setShowForm(true)} className="btn-protect-outline">
               <Plus className="mr-2 h-4 w-4" />
               New Brand
             </Button>
@@ -91,7 +91,7 @@ export default function BrandListPage() {
           title="Brands" 
           description="Manage product brands"
           children={
-            <Button onClick={() => setShowForm(true)}>
+            <Button onClick={() => setShowForm(true)} className="btn-protect-outline">
               <Plus className="mr-2 h-4 w-4" />
               New Brand
             </Button>
@@ -120,7 +120,7 @@ export default function BrandListPage() {
         title="Brands" 
         description="Manage product brands"
         children={
-          <Button onClick={() => setShowForm(true)}>
+          <Button onClick={() => setShowForm(true)} className="btn-protect-outline">
             <Plus className="mr-2 h-4 w-4" />
             New Brand
           </Button>
@@ -169,7 +169,7 @@ export default function BrandListPage() {
                 </Link>
               </div>
               <div className="mt-4">
-                <Button asChild variant="outline" size="sm">
+                <Button asChild size="sm" className="btn-protect-outline">
                   <Link to={`/brands/${brand.id}`}>
                     View Details
                   </Link>

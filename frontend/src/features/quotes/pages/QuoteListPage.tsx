@@ -61,7 +61,7 @@ export default function QuoteListPage() {
             title="Quotes" 
             description="Manage your quotes"
             children={
-              <Button asChild>
+              <Button asChild className="btn-protect-outline">
                 <Link to="/quotes/new">
                   <Plus className="mr-2 h-4 w-4" />
                   New Quote
@@ -104,7 +104,7 @@ export default function QuoteListPage() {
             title="Quotes" 
             description="Manage your quotes"
             children={
-              <Button asChild>
+              <Button asChild className="btn-protect-outline">
                 <Link to="/quotes/new">
                   <Plus className="mr-2 h-4 w-4" />
                   New Quote
@@ -145,7 +145,7 @@ export default function QuoteListPage() {
             title="Quotes" 
             description="Manage your quotes"
             children={
-              <Button asChild>
+              <Button asChild className="btn-protect-outline">
                 <Link to="/quotes/new">
                   <Plus className="mr-2 h-4 w-4" />
                   New Quote
@@ -228,7 +228,7 @@ export default function QuoteListPage() {
 
             {/* Clear Filters */}
             {(trimmedSearch || statusFilter) && (
-                <Button variant="outline" size="sm" onClick={() => {
+                <Button size="sm" className="btn-protect-outline" onClick={() => {
                   setSearch('')
                   setStatusFilter('')
                 }}>

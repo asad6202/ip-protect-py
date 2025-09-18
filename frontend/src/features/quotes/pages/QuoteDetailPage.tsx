@@ -131,15 +131,15 @@ export default function QuoteDetailPage() {
         showBackButton
         children={
           <div className="flex space-x-2">
-            <Button variant="outline">
+            <Button className="btn-protect-outline">
               <Copy className="mr-2 h-4 w-4" />
               Duplicate
             </Button>
-            <Button variant="outline">
+            <Button className="btn-protect-outline">
               <Download className="mr-2 h-4 w-4" />
               Export
             </Button>
-            <Button variant="outline">
+            <Button className="btn-protect-outline">
               <Send className="mr-2 h-4 w-4" />
               Send
             </Button>
@@ -255,7 +255,7 @@ export default function QuoteDetailPage() {
                 </div>
                 <Button 
                   onClick={() => setShowFeedbackForm(true)}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 btn-protect-outline"
                 >
                   <MessageSquare className="h-4 w-4" />
                   Add Feedback
@@ -329,7 +329,7 @@ export default function QuoteDetailPage() {
                   <p className="text-muted-foreground mb-4">
                     Be the first to provide feedback on this quote
                   </p>
-                  <Button onClick={() => setShowFeedbackForm(true)}>
+                  <Button onClick={() => setShowFeedbackForm(true)} className="btn-protect-outline">
                     <MessageSquare className="mr-2 h-4 w-4" />
                     Add Feedback
                   </Button>
@@ -354,8 +354,8 @@ export default function QuoteDetailPage() {
               <div className="flex items-center justify-between">
                 <CardTitle>Notes</CardTitle>
                 <Button
-                  variant="outline"
                   size="sm"
+                  className="btn-protect-outline"
                   onClick={() => {
                     if (isEditingNotes) {
                       handleUpdateNotes()
@@ -381,7 +381,7 @@ export default function QuoteDetailPage() {
                   />
                   <div className="flex justify-end space-x-2">
                     <Button
-                      variant="outline"
+                      className="btn-protect-outline"
                       onClick={() => {
                         setIsEditingNotes(false)
                         setNotes('')
@@ -451,15 +451,15 @@ export default function QuoteDetailPage() {
               <CardTitle>Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button className="w-full" variant="outline">
+              <Button className="w-full btn-protect-outline">
                 <Send className="mr-2 h-4 w-4" />
                 Send Quote
               </Button>
-              <Button className="w-full" variant="outline">
+              <Button className="w-full btn-protect-outline">
                 <Download className="mr-2 h-4 w-4" />
                 Export PDF
               </Button>
-              <Button className="w-full" variant="outline">
+              <Button className="w-full btn-protect-outline">
                 <Copy className="mr-2 h-4 w-4" />
                 Duplicate
               </Button>
