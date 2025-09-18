@@ -5,20 +5,10 @@ Product management endpoints for the IP Protect system.
 from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel
-from db import Database
+from db import Database, get_database
 import math
 
 router = APIRouter()
-
-# Global database instance
-db_instance = None
-
-def get_database() -> Database:
-    """Get database instance."""
-    global db_instance
-    if db_instance is None:
-        db_instance = Database()
-    return db_instance
 
 class Product(BaseModel):
     id: str

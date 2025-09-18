@@ -10,61 +10,48 @@ import {
   Settings
 } from 'lucide-react'
 import { formatCurrency, formatRelativeTime } from '@/lib-utils/format'
-import { Quote, ProductUpload } from '@/lib-utils/types'
-
-// Mock data for now - replace with actual API calls
-const mockStats = {
-  brands: 3,
-  products: 1247,
-  quotes: 23,
-  uploads: 8
-}
-
-const mockRecentQuotes: Quote[] = [
-  {
-    id: '1',
-    title: 'Security System Quote',
-    prompt: 'Need a complete security system for office building',
-    currency: 'USD',
-    total_amount: 15420.50,
-    status: 'draft',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  },
-  {
-    id: '2',
-    title: 'Retail Store Cameras',
-    prompt: 'IP cameras for retail store with night vision',
-    currency: 'USD',
-    total_amount: 8750.00,
-    status: 'sent',
-    created_at: new Date(Date.now() - 86400000).toISOString(),
-    updated_at: new Date(Date.now() - 86400000).toISOString()
-  }
-]
-
-const mockRecentUploads: ProductUpload[] = [
-  {
-    id: '1',
-    brand_id: '1',
-    original_name: 'axis_products.csv',
-    stored_path: '/uploads/axis_products.csv',
-    row_count: 450,
-    status: 'processed',
-    created_at: new Date().toISOString()
-  },
-  {
-    id: '2',
-    brand_id: '2',
-    original_name: 'hanwha_products.csv',
-    stored_path: '/uploads/hanwha_products.csv',
-    row_count: 320,
-    status: 'processing',
-    created_at: new Date(Date.now() - 3600000).toISOString()
-  }
-]
+import { useDashboardStats, useRecentQuotes, useRecentUploads } from './api'
 
 export default function DashboardPage() {
+  // Fetch real data from APIs
+  const { data: stats, isLoading: statsLoading, isError: statsError, error: statsErrorMessage } = useDashboardStats()
+  const { data: recentQuotes, isLoading: quotesLoading, isError: quotesError, error: quotesErrorMessage } = useRecentQuotes(5)
+  const { data: recentUploads, isLoading: uploadsLoading, isError: uploadsError, error: uploadsErrorMessage } = useRecentUploads(5)
+
+  // Use fallback values if data is loading or error
+  const displayStats = stats || { brands: 0, products: 0, quotes: 0, uploads: 0 }
+  const displayQuotes = recentQuotes || []
+  const displayUploads = recentUploads || []
+
+  // Show error message if any API calls failed
+  if (statsError || quotesError || uploadsError) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-4xl font-bold tracking-tight text-protect-black">Dashboard</h1>
+          <p className="text-protect-medium-grey text-lg">
+            Welcome to Protect-IP Quote Generator
+          </p>
+        </div>
+        <Card className="border-protect-error bg-protect-error/5">
+          <CardContent className="pt-6">
+            <div className="flex items-center space-x-2">
+              <div className="h-4 w-4 bg-protect-error rounded-full"></div>
+              <p className="text-protect-error font-medium">
+                Failed to load dashboard data. Please try refreshing the page.
+              </p>
+            </div>
+            {(statsErrorMessage || quotesErrorMessage || uploadsErrorMessage) && (
+              <p className="text-protect-medium-grey text-sm mt-2">
+                Error: {(statsErrorMessage?.message || quotesErrorMessage?.message || uploadsErrorMessage?.message)}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -82,7 +69,7 @@ export default function DashboardPage() {
             <Building2 className="h-5 w-5 text-protect-red group-hover:scale-110 transition-transform duration-200" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-protect-black mb-1">{mockStats.brands}</div>
+            <div className="text-3xl font-bold text-protect-black mb-1">{statsLoading ? '...' : displayStats.brands.toLocaleString()}</div>
             <p className="text-xs text-protect-medium-grey font-medium">
               Active brands
             </p>
@@ -95,7 +82,7 @@ export default function DashboardPage() {
             <Package className="h-5 w-5 text-protect-red group-hover:scale-110 transition-transform duration-200" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-protect-black mb-1">{mockStats.products.toLocaleString()}</div>
+            <div className="text-3xl font-bold text-protect-black mb-1">{statsLoading ? '...' : displayStats.products.toLocaleString()}</div>
             <p className="text-xs text-protect-medium-grey font-medium">
               Available products
             </p>
@@ -108,7 +95,7 @@ export default function DashboardPage() {
             <ShoppingCart className="h-5 w-5 text-protect-red group-hover:scale-110 transition-transform duration-200" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-protect-black mb-1">{mockStats.quotes}</div>
+            <div className="text-3xl font-bold text-protect-black mb-1">{statsLoading ? '...' : displayStats.quotes.toLocaleString()}</div>
             <p className="text-xs text-protect-medium-grey font-medium">
               Generated quotes
             </p>
@@ -121,7 +108,7 @@ export default function DashboardPage() {
             <Upload className="h-5 w-5 text-protect-red group-hover:scale-110 transition-transform duration-200" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-protect-black mb-1">{mockStats.uploads}</div>
+            <div className="text-3xl font-bold text-protect-black mb-1">{statsLoading ? '...' : displayStats.uploads.toLocaleString()}</div>
             <p className="text-xs text-protect-medium-grey font-medium">
               Product uploads
             </p>
@@ -147,7 +134,16 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y divide-protect-light-grey">
-              {mockRecentQuotes.map((quote) => (
+              {quotesLoading ? (
+                <div className="p-4 text-center text-protect-medium-grey">
+                  Loading recent quotes...
+                </div>
+              ) : displayQuotes.length === 0 ? (
+                <div className="p-4 text-center text-protect-medium-grey">
+                  No recent quotes
+                </div>
+              ) : (
+                displayQuotes.map((quote) => (
                 <div key={quote.id} className="flex items-center justify-between p-4 hover:bg-protect-light-grey/50 transition-colors duration-200 group">
                   <div className="space-y-1">
                     <p className="text-sm font-medium leading-none text-protect-black group-hover:text-protect-red transition-colors">
@@ -170,7 +166,8 @@ export default function DashboardPage() {
                     </span>
                   </div>
                 </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
@@ -192,7 +189,16 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y divide-protect-light-grey">
-              {mockRecentUploads.map((upload) => (
+              {uploadsLoading ? (
+                <div className="p-4 text-center text-protect-medium-grey">
+                  Loading recent uploads...
+                </div>
+              ) : displayUploads.length === 0 ? (
+                <div className="p-4 text-center text-protect-medium-grey">
+                  No recent uploads
+                </div>
+              ) : (
+                displayUploads.map((upload) => (
                 <div key={upload.id} className="flex items-center justify-between p-4 hover:bg-protect-light-grey/50 transition-colors duration-200 group">
                   <div className="space-y-1">
                     <p className="text-sm font-medium leading-none text-protect-black group-hover:text-protect-red transition-colors">
@@ -212,7 +218,8 @@ export default function DashboardPage() {
                     </span>
                   </div>
                 </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>

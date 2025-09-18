@@ -37,3 +37,14 @@ class Database:
             rows = await stmt.fetch()
             results: List[Dict[str, Any]] = [dict(row) for row in rows]
             return results
+
+
+# Global database instance for dependency injection
+db_instance: Database | None = None
+
+def get_database() -> Database:
+    """Get database instance for dependency injection."""
+    global db_instance
+    if db_instance is None:
+        db_instance = Database()
+    return db_instance

@@ -3,9 +3,12 @@ API v1 router configuration.
 """
 
 from fastapi import APIRouter
-from app.api.v1.endpoints import quote, product, upload
+from app.api.v1.endpoints import quote, product, upload, dashboard
 
 api_router = APIRouter()
+
+# Include dashboard endpoints
+api_router.include_router(dashboard.router, tags=["dashboard"])
 
 # Include quote endpoints
 api_router.include_router(quote.router, tags=["quote"])
