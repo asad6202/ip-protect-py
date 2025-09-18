@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ title }}</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>NL2SQL Demo</h1>
+    <p>Ask a question about products. We'll translate it to SQL and show results.</p>
+
+    <form id="query-form">
+      <label for="query">Your question</label>
+      <div class="row">
+        <input type="text" id="query" name="query" placeholder="e.g., Show active vandal resistant cameras under 1400 CAD" required />
+        <button type="submit">Run</button>
+      </div>
+    </form>
+
+    <div id="error" class="error hidden"></div>
+
+    <!-- <div id="sql" class="sql hidden">
+      <h3>Generated SQL</h3>
+      <pre id="sql-text"></pre>
+    </div> -->
+
+    <div id="results" class="results hidden">
+      <h3>Results</h3>
+      <table id="results-table">
+        <thead>
+          <tr>
+            <th>sku</th>
+            <th>description</th>
+            <th>price</th>
+            <th>currency</th>
+            <th>family</th>
+            <th>status</th>
+          </tr>
+        </thead>
+        <tbody id="results-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('query-form');
+    const errorBox = document.getElementById('error');
+    const sqlBox = document.getElementById('sql');
+    const sqlText = document.getElementById('sql-text');
+    const resultsBox = document.getElementById('results');
+    const resultsBody = document.getElementById('results-body');
+
+    function show(el) { el.classList.remove('hidden'); }
+    function hide(el) { el.classList.add('hidden'); }
+    function setError(msg) { errorBox.textContent = msg; show(errorBox); }
+    function clearError() { errorBox.textContent = ''; hide(errorBox); }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearError();
+      hide(sqlBox);
+      hide(resultsBox);
+      resultsBody.innerHTML = '';
+      sqlText.textContent = '';
+
+      const query = document.getElementById('query').value.trim();
+      if (!query) { setError('Please enter a question.'); return; }
+
+      try {
+        const res = await fetch('/query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query })
+        });
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({ detail: 'Request failed' }));
+          throw new Error(data.detail || 'Request failed');
+        }
+
+        const data = await res.json();
+        if (data.sql) {
+          sqlText.textContent = data.sql;
+          show(sqlBox);
+        }
+
+        if (Array.isArray(data.results)) {
+          if (data.results.length === 0) {
+            resultsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No results</td></tr>';
+          } else {
+            for (const row of data.results) {
+              const tr = document.createElement('tr');
+              tr.innerHTML = `
+                <td>${row.sku ?? ''}</td>
+                <td title="${row.description ?? ''}">${(row.description || '').slice(0, 120)}</td>
+                <td>${row.price ?? ''}</td>
+                <td>${row.currency ?? ''}</td>
+                <td>${row.family ?? ''}</td>
+                <td>${row.status ?? ''}</td>
+              `;
+              resultsBody.appendChild(tr);
+            }
+          }
+          show(resultsBox);
+        }
+      } catch (err) {
+        setError(err.message || 'Something went wrong');
+      }
+    });
+  </script>
+</body>
+</html>
+
+
