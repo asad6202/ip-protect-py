@@ -380,6 +380,14 @@ async def process_upload_file(conn, upload_id: str, file_path: str, brand_id: Op
                 "UPDATE product_uploads SET status = 'processed', message = $1, processed_at = NOW() WHERE id = $2",
                 f"Successfully imported {imported_count} products", upload_id
             )
+            
+            # Delete the uploaded file after successful processing
+            try:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    print(f"Successfully deleted uploaded file: {file_path}")
+            except Exception as e:
+                print(f"Warning: Failed to delete uploaded file {file_path}: {str(e)}")
     
     except Exception as e:
         # Update status to failed

@@ -110,6 +110,33 @@ export default function BrandListPage() {
             />
           </CardContent>
         </Card>
+
+        {/* Forms and Dialogs - Always render these */}
+        <BrandForm
+          open={showForm}
+          onOpenChange={setShowForm}
+          onSuccess={() => setShowForm(false)}
+        />
+
+        <BrandForm
+          open={!!editingBrand}
+          onOpenChange={(open) => !open && setEditingBrand(null)}
+          brand={editingBrand}
+          onSuccess={() => setEditingBrand(null)}
+        />
+
+        <ConfirmDialog
+          open={!!deleteConfirm}
+          onOpenChange={(open) => !open && setDeleteConfirm(null)}
+          title="Delete Brand"
+          description="Are you sure you want to delete this brand? This action cannot be undone."
+          onConfirm={async () => {
+            if (deleteConfirm) {
+              await deleteBrand.mutateAsync(deleteConfirm)
+              setDeleteConfirm(null)
+            }
+          }}
+        />
       </div>
     )
   }

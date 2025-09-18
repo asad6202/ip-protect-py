@@ -89,9 +89,13 @@ export default function UploadDialog({
       }
 
       await uploadFile.mutateAsync(formData)
+      
+      // Clear file and form after successful upload
       setFile(null)
       form.reset()
       setUploadError(null)
+      
+      // Call success callback and close dialog
       onSuccess?.()
       onOpenChange(false)
     } catch (error) {
@@ -107,7 +111,7 @@ export default function UploadDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-2xl w-full max-w-[90vw]">
         <DialogHeader>
           <DialogTitle>Upload Products</DialogTitle>
           <DialogDescription>
@@ -141,19 +145,24 @@ export default function UploadDialog({
                 </p>
               </div>
             ) : (
-              <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
-                <div className="flex items-center space-x-2">
-                  <File className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">{file.name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                  </span>
+              <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/50 gap-3">
+                <div className="flex items-center space-x-3 min-w-0 flex-1">
+                  <File className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium break-all">
+                      {file.name}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {(file.size / 1024 / 1024).toFixed(2)} MB
+                    </div>
+                  </div>
                 </div>
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
                   onClick={removeFile}
+                  className="flex-shrink-0"
                 >
                   <X className="h-4 w-4" />
                 </Button>
