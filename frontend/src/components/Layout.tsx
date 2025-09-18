@@ -94,8 +94,8 @@ export default function Layout() {
         "transition-all duration-300 ease-in-out h-full flex flex-col",
         collapsed ? "pl-16" : "pl-64"
       )}>
-        <main className="flex-1 py-4 h-full overflow-hidden">
-          <div className="mx-auto max-w-full px-4 sm:px-6 lg:px-8 h-full">
+        <main className="flex-1 py-4 h-full overflow-y-auto">
+          <div className="mx-auto max-w-full px-4 sm:px-6 lg:px-8">
             <Outlet />
           </div>
         </main>

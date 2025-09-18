@@ -6,15 +6,17 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Star, Send } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Star, Send, AlertCircle, CheckCircle, XCircle, HelpCircle } from 'lucide-react'
 import { useCreateFeedback } from '../api'
 import { CreateFeedbackRequest } from '@/lib/types'
 
 const feedbackSchema = z.object({
   rating: z.number().min(1).max(5).optional(),
   comment: z.string().optional(),
-  labels: z.string().optional(),
-  corrections: z.string().optional(),
+  accuracy: z.enum(['excellent', 'good', 'fair', 'poor']).optional(),
+  issues: z.string().optional(),
+  suggestions: z.string().optional(),
 })
 
 type FeedbackFormData = z.infer<typeof feedbackSchema>
@@ -33,18 +35,25 @@ export default function FeedbackForm({ quoteId, onSuccess }: FeedbackFormProps) 
     defaultValues: {
       rating: undefined,
       comment: '',
-      labels: '',
-      corrections: '',
+      accuracy: undefined,
+      issues: '',
+      suggestions: '',
     },
   })
 
   const onSubmit = async (data: FeedbackFormData) => {
     try {
+      // Prepare structured feedback data for GPT improvement
+      const structuredFeedback = {
+        accuracy: data.accuracy,
+        issues: data.issues || undefined,
+        suggestions: data.suggestions || undefined,
+      }
+
       const feedbackData: CreateFeedbackRequest = {
         rating: data.rating as 1 | 2 | 3 | 4 | 5 | undefined,
         comment: data.comment || undefined,
-        labels: data.labels ? JSON.parse(data.labels) : undefined,
-        corrections: data.corrections ? JSON.parse(data.corrections) : undefined,
+        labels: structuredFeedback,
       }
 
       await createFeedback.mutateAsync({
@@ -52,7 +61,13 @@ export default function FeedbackForm({ quoteId, onSuccess }: FeedbackFormProps) 
         data: feedbackData,
       })
 
-      form.reset()
+      form.reset({
+        rating: undefined,
+        comment: '',
+        accuracy: undefined,
+        issues: '',
+        suggestions: '',
+      })
       setRating(undefined)
       onSuccess?.()
     } catch (error) {
@@ -85,16 +100,19 @@ export default function FeedbackForm({ quoteId, onSuccess }: FeedbackFormProps) 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Provide Feedback</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <HelpCircle className="h-5 w-5" />
+          Quick Feedback
+        </CardTitle>
         <CardDescription>
           Help us improve by sharing your thoughts on this quote
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          {/* Rating */}
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {/* Overall Rating */}
           <div className="space-y-2">
-            <Label>Rating</Label>
+            <Label className="text-base font-medium">How would you rate this quote?</Label>
             <StarRating
               value={rating || 0}
               onChange={(value) => {
@@ -109,58 +127,83 @@ export default function FeedbackForm({ quoteId, onSuccess }: FeedbackFormProps) 
             )}
           </div>
 
-          {/* Comment */}
+          {/* Accuracy Assessment */}
           <div className="space-y-2">
-            <Label htmlFor="comment">Comment</Label>
+            <Label htmlFor="accuracy" className="text-base font-medium">How accurate was the product selection?</Label>
+            <Select
+              value={form.watch('accuracy')}
+              onValueChange={(value) => form.setValue('accuracy', value as any)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select accuracy level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="excellent">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    Excellent - Perfect match
+                  </div>
+                </SelectItem>
+                <SelectItem value="good">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-blue-500" />
+                    Good - Mostly accurate
+                  </div>
+                </SelectItem>
+                <SelectItem value="fair">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-yellow-500" />
+                    Fair - Some issues
+                  </div>
+                </SelectItem>
+                <SelectItem value="poor">
+                  <div className="flex items-center gap-2">
+                    <XCircle className="h-4 w-4 text-red-500" />
+                    Poor - Many issues
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Issues - Combined field */}
+          <div className="space-y-2">
+            <Label htmlFor="issues" className="text-base font-medium">Any issues or problems?</Label>
+            <Textarea
+              id="issues"
+              {...form.register('issues')}
+              placeholder="Tell us about any missing products, incorrect items, pricing issues, or other problems..."
+              className="min-h-[100px]"
+            />
+          </div>
+
+          {/* Suggestions */}
+          <div className="space-y-2">
+            <Label htmlFor="suggestions" className="text-base font-medium">Suggestions for improvement</Label>
+            <Textarea
+              id="suggestions"
+              {...form.register('suggestions')}
+              placeholder="How can we make this better? Any suggestions?"
+              className="min-h-[80px]"
+            />
+          </div>
+
+          {/* General Comment */}
+          <div className="space-y-2">
+            <Label htmlFor="comment" className="text-base font-medium">Additional comments (optional)</Label>
             <Textarea
               id="comment"
               {...form.register('comment')}
-              placeholder="Share your thoughts about this quote..."
-              className="min-h-[100px]"
+              placeholder="Any other feedback or comments..."
+              className="min-h-[80px]"
             />
-            {form.formState.errors.comment && (
-              <p className="text-sm text-destructive">
-                {form.formState.errors.comment.message}
-              </p>
-            )}
-          </div>
-
-          {/* Labels */}
-          <div className="space-y-2">
-            <Label htmlFor="labels">Labels (JSON)</Label>
-            <Textarea
-              id="labels"
-              {...form.register('labels')}
-              placeholder='{"category": "security", "priority": "high"}'
-              className="min-h-[80px] font-mono text-sm"
-            />
-            {form.formState.errors.labels && (
-              <p className="text-sm text-destructive">
-                {form.formState.errors.labels.message}
-              </p>
-            )}
-          </div>
-
-          {/* Corrections */}
-          <div className="space-y-2">
-            <Label htmlFor="corrections">Corrections (JSON)</Label>
-            <Textarea
-              id="corrections"
-              {...form.register('corrections')}
-              placeholder='{"items": [{"sku": "ABC123", "suggested_price": 150}]}'
-              className="min-h-[80px] font-mono text-sm"
-            />
-            {form.formState.errors.corrections && (
-              <p className="text-sm text-destructive">
-                {form.formState.errors.corrections.message}
-              </p>
-            )}
           </div>
 
           <Button
             type="submit"
             disabled={createFeedback.isPending}
             className="w-full"
+            size="lg"
           >
             {createFeedback.isPending ? (
               'Submitting...'

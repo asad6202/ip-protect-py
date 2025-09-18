@@ -85,23 +85,42 @@ export default function ProductListPage() {
           </div>
         </div>
 
+        {/* Fixed Filters */}
+        <Card className="mb-6 flex-shrink-0">
+          <CardContent className="p-4">
+            <div className="flex flex-col space-y-4 lg:flex-row lg:space-y-0 lg:space-x-4">
+              <div className="relative flex-1">
+                <div className="h-10 bg-muted rounded animate-pulse"></div>
+              </div>
+              <div className="w-full lg:w-48">
+                <div className="h-10 bg-muted rounded animate-pulse"></div>
+              </div>
+              <div className="w-full lg:w-48">
+                <div className="h-10 bg-muted rounded animate-pulse"></div>
+              </div>
+              <div className="w-full lg:w-48">
+                <div className="h-10 bg-muted rounded animate-pulse"></div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Scrollable Loading State */}
-        <div className="flex-1 min-h-0">
-          <div className="space-y-4">
-            {[...Array(5)].map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-2">
-                      <div className="h-4 bg-muted rounded w-48"></div>
-                      <div className="h-3 bg-muted rounded w-32"></div>
-                    </div>
-                    <div className="h-6 bg-muted rounded w-20"></div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <Card className="h-full">
+            <CardContent className="p-0 h-full flex flex-col">
+              <div className="border-b border-border/50 bg-background flex-shrink-0 sticky top-0 z-10">
+                <div className="h-12 bg-muted animate-pulse"></div>
+              </div>
+              <div className="flex-1 overflow-y-auto max-h-[calc(100vh-400px)] sm:max-h-[calc(100vh-350px)] lg:max-h-[calc(100vh-300px)]">
+                <div className="space-y-0">
+                  {[...Array(10)].map((_, i) => (
+                    <div key={i} className="h-16 border-b border-border/30 bg-muted/10 animate-pulse"></div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
@@ -120,10 +139,30 @@ export default function ProductListPage() {
           </div>
         </div>
 
+        {/* Fixed Filters */}
+        <Card className="mb-6 flex-shrink-0">
+          <CardContent className="p-4">
+            <div className="flex flex-col space-y-4 lg:flex-row lg:space-y-0 lg:space-x-4">
+              <div className="relative flex-1">
+                <div className="h-10 bg-muted rounded animate-pulse"></div>
+              </div>
+              <div className="w-full lg:w-48">
+                <div className="h-10 bg-muted rounded animate-pulse"></div>
+              </div>
+              <div className="w-full lg:w-48">
+                <div className="h-10 bg-muted rounded animate-pulse"></div>
+              </div>
+              <div className="w-full lg:w-48">
+                <div className="h-10 bg-muted rounded animate-pulse"></div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Scrollable Error State */}
-        <div className="flex-1 min-h-0">
-          <Card>
-            <CardContent className="py-12">
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <Card className="h-full">
+            <CardContent className="py-12 h-full flex items-center justify-center">
               <EmptyState
                 icon={<Package className="h-12 w-12" />}
                 title="Error loading products"
@@ -161,8 +200,8 @@ export default function ProductListPage() {
           </p>
         </div>
 
-        {/* Filters */}
-        <Card className="mb-8">
+        {/* Fixed Filters */}
+        <Card className="mb-8 flex-shrink-0">
           <CardContent className="p-4">
             <div className="flex flex-col space-y-4 lg:flex-row lg:space-y-0 lg:space-x-4">
               {/* Search */}
@@ -260,11 +299,11 @@ export default function ProductListPage() {
         </Card>
       </div>
 
-      {/* Scrollable Content Area */}
-      <div className="flex-1 min-h-0">
+      {/* Scrollable Content Area with responsive height */}
+      <div className="flex-1 min-h-0 overflow-hidden mt-3">
         {products.length === 0 ? (
-          <Card>
-            <CardContent className="py-12">
+          <Card className="h-full">
+            <CardContent className="py-12 h-full flex items-center justify-center">
               <EmptyState
                 icon={<Package className="h-12 w-12" />}
                 title="No products found"
@@ -275,10 +314,10 @@ export default function ProductListPage() {
         ) : (
           <div className="h-full flex flex-col">
             {/* Table Container with Scrollable Body */}
-            <Card className="shadow-sm border-border/50 flex-1 min-h-0">
+            <Card className="shadow-sm border-border/50 flex-1 min-h-0 overflow-hidden">
               <CardContent className="p-0 h-full flex flex-col">
                 {/* Table Header - Fixed */}
-                <div className="border-b border-border/50 bg-background flex-shrink-0">
+                <div className="border-b border-border/50 bg-background flex-shrink-0 sticky top-0 z-10">
                   <Table>
                     <TableHeader>
                       <TableRow className="hover:bg-transparent">
@@ -306,7 +345,7 @@ export default function ProductListPage() {
                 </div>
 
                 {/* Table Body - Scrollable with responsive height */}
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto max-h-[calc(100vh-400px)] sm:max-h-[calc(100vh-350px)] lg:max-h-[calc(100vh-300px)]">
                   <Table>
                     <TableBody>
                       {products.map((product, index) => (

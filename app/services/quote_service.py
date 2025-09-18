@@ -460,6 +460,105 @@ class QuoteService:
         
         return result
     
+    async def get_feedback_analytics(self) -> dict:
+        """Get feedback analytics for GPT improvement."""
+        # Get overall feedback statistics
+        stats = await self.conn.fetchrow("""
+            SELECT 
+                COUNT(*) as total_feedback,
+                AVG(rating) as avg_rating,
+                COUNT(CASE WHEN rating >= 4 THEN 1 END) as positive_feedback,
+                COUNT(CASE WHEN rating <= 2 THEN 1 END) as negative_feedback
+            FROM quote_feedback
+        """)
+        
+        # Get accuracy distribution
+        accuracy_stats = await self.conn.fetchrow("""
+            SELECT 
+                COUNT(CASE WHEN labels->>'accuracy' = 'excellent' THEN 1 END) as excellent,
+                COUNT(CASE WHEN labels->>'accuracy' = 'good' THEN 1 END) as good,
+                COUNT(CASE WHEN labels->>'accuracy' = 'fair' THEN 1 END) as fair,
+                COUNT(CASE WHEN labels->>'accuracy' = 'poor' THEN 1 END) as poor
+            FROM quote_feedback
+            WHERE labels->>'accuracy' IS NOT NULL
+        """)
+        
+        # Get common issues
+        common_issues = await self.conn.fetch("""
+            SELECT 
+                'missing_products' as issue_type,
+                COUNT(*) as count
+            FROM quote_feedback 
+            WHERE labels->>'missing_products' IS NOT NULL AND labels->>'missing_products' != ''
+            UNION ALL
+            SELECT 
+                'incorrect_products' as issue_type,
+                COUNT(*) as count
+            FROM quote_feedback 
+            WHERE labels->>'incorrect_products' IS NOT NULL AND labels->>'incorrect_products' != ''
+            UNION ALL
+            SELECT 
+                'pricing_issues' as issue_type,
+                COUNT(*) as count
+            FROM quote_feedback 
+            WHERE labels->>'pricing_issues' IS NOT NULL AND labels->>'pricing_issues' != ''
+            UNION ALL
+            SELECT 
+                'quantity_issues' as issue_type,
+                COUNT(*) as count
+            FROM quote_feedback 
+            WHERE labels->>'quantity_issues' IS NOT NULL AND labels->>'quantity_issues' != ''
+            UNION ALL
+            SELECT 
+                'technical_specs' as issue_type,
+                COUNT(*) as count
+            FROM quote_feedback 
+            WHERE labels->>'technical_specs' IS NOT NULL AND labels->>'technical_specs' != ''
+            ORDER BY count DESC
+        """)
+        
+        # Get recent feedback for GPT context
+        recent_feedback = await self.conn.fetch("""
+            SELECT 
+                rating,
+                comment,
+                labels,
+                corrections,
+                created_at
+            FROM quote_feedback
+            ORDER BY created_at DESC
+            LIMIT 10
+        """)
+        
+        return {
+            "overall_stats": {
+                "total_feedback": stats['total_feedback'] or 0,
+                "average_rating": float(stats['avg_rating']) if stats['avg_rating'] else 0,
+                "positive_feedback": stats['positive_feedback'] or 0,
+                "negative_feedback": stats['negative_feedback'] or 0,
+            },
+            "accuracy_distribution": {
+                "excellent": accuracy_stats['excellent'] or 0,
+                "good": accuracy_stats['good'] or 0,
+                "fair": accuracy_stats['fair'] or 0,
+                "poor": accuracy_stats['poor'] or 0,
+            },
+            "common_issues": [
+                {"issue_type": row['issue_type'], "count": row['count']}
+                for row in common_issues
+            ],
+            "recent_feedback": [
+                {
+                    "rating": row['rating'],
+                    "comment": row['comment'],
+                    "labels": json.loads(row['labels']) if row['labels'] else None,
+                    "corrections": json.loads(row['corrections']) if row['corrections'] else None,
+                    "created_at": row['created_at'].isoformat()
+                }
+                for row in recent_feedback
+            ]
+        }
+    
     async def update_quote(self, quote_id: str, updates: Dict[str, Any]) -> QuoteResponse:
         """Update quote with provided fields."""
         # Check if quote exists
@@ -572,3 +671,252 @@ class QuoteService:
             ))
         
         return result
+    
+    async def get_feedback_analytics(self) -> dict:
+        """Get feedback analytics for GPT improvement."""
+        # Get overall feedback statistics
+        stats = await self.conn.fetchrow("""
+            SELECT 
+                COUNT(*) as total_feedback,
+                AVG(rating) as avg_rating,
+                COUNT(CASE WHEN rating >= 4 THEN 1 END) as positive_feedback,
+                COUNT(CASE WHEN rating <= 2 THEN 1 END) as negative_feedback
+            FROM quote_feedback
+        """)
+        
+        # Get accuracy distribution
+        accuracy_stats = await self.conn.fetchrow("""
+            SELECT 
+                COUNT(CASE WHEN labels->>'accuracy' = 'excellent' THEN 1 END) as excellent,
+                COUNT(CASE WHEN labels->>'accuracy' = 'good' THEN 1 END) as good,
+                COUNT(CASE WHEN labels->>'accuracy' = 'fair' THEN 1 END) as fair,
+                COUNT(CASE WHEN labels->>'accuracy' = 'poor' THEN 1 END) as poor
+            FROM quote_feedback
+            WHERE labels->>'accuracy' IS NOT NULL
+        """)
+        
+        # Get common issues
+        common_issues = await self.conn.fetch("""
+            SELECT 
+                'missing_products' as issue_type,
+                COUNT(*) as count
+            FROM quote_feedback 
+            WHERE labels->>'missing_products' IS NOT NULL AND labels->>'missing_products' != ''
+            UNION ALL
+            SELECT 
+                'incorrect_products' as issue_type,
+                COUNT(*) as count
+            FROM quote_feedback 
+            WHERE labels->>'incorrect_products' IS NOT NULL AND labels->>'incorrect_products' != ''
+            UNION ALL
+            SELECT 
+                'pricing_issues' as issue_type,
+                COUNT(*) as count
+            FROM quote_feedback 
+            WHERE labels->>'pricing_issues' IS NOT NULL AND labels->>'pricing_issues' != ''
+            UNION ALL
+            SELECT 
+                'quantity_issues' as issue_type,
+                COUNT(*) as count
+            FROM quote_feedback 
+            WHERE labels->>'quantity_issues' IS NOT NULL AND labels->>'quantity_issues' != ''
+            UNION ALL
+            SELECT 
+                'technical_specs' as issue_type,
+                COUNT(*) as count
+            FROM quote_feedback 
+            WHERE labels->>'technical_specs' IS NOT NULL AND labels->>'technical_specs' != ''
+            ORDER BY count DESC
+        """)
+        
+        # Get recent feedback for GPT context
+        recent_feedback = await self.conn.fetch("""
+            SELECT 
+                rating,
+                comment,
+                labels,
+                corrections,
+                created_at
+            FROM quote_feedback
+            ORDER BY created_at DESC
+            LIMIT 10
+        """)
+        
+        return {
+            "overall_stats": {
+                "total_feedback": stats['total_feedback'] or 0,
+                "average_rating": float(stats['avg_rating']) if stats['avg_rating'] else 0,
+                "positive_feedback": stats['positive_feedback'] or 0,
+                "negative_feedback": stats['negative_feedback'] or 0,
+            },
+            "accuracy_distribution": {
+                "excellent": accuracy_stats['excellent'] or 0,
+                "good": accuracy_stats['good'] or 0,
+                "fair": accuracy_stats['fair'] or 0,
+                "poor": accuracy_stats['poor'] or 0,
+            },
+            "common_issues": [
+                {"issue_type": row['issue_type'], "count": row['count']}
+                for row in common_issues
+            ],
+            "recent_feedback": [
+                {
+                    "rating": row['rating'],
+                    "comment": row['comment'],
+                    "labels": json.loads(row['labels']) if row['labels'] else None,
+                    "corrections": json.loads(row['corrections']) if row['corrections'] else None,
+                    "created_at": row['created_at'].isoformat()
+                }
+                for row in recent_feedback
+            ]
+        }
+    
+    async def add_feedback(self, quote_id: str, feedback: QuoteFeedbackRequest) -> QuoteFeedbackResponse:
+        """Add feedback to a quote."""
+        feedback_id = str(uuid4())
+        
+        # Insert feedback into database
+        await self.conn.execute("""
+            INSERT INTO quote_feedback (id, quote_id, rating, comment, labels, corrections)
+            VALUES ($1, $2, $3, $4, $5, $6)
+        """, 
+        feedback_id, 
+        quote_id, 
+        feedback.rating, 
+        feedback.comment,
+        json.dumps(feedback.labels) if feedback.labels else None,
+        json.dumps(feedback.corrections) if feedback.corrections else None
+        )
+        
+        # Return the created feedback
+        return QuoteFeedbackResponse(
+            id=feedback_id,
+            quote_id=quote_id,
+            rating=feedback.rating,
+            comment=feedback.comment,
+            labels=feedback.labels,
+            corrections=feedback.corrections,
+            created_at=datetime.now().isoformat()
+        )
+    
+    async def get_feedback(self, quote_id: str) -> List[QuoteFeedbackResponse]:
+        """Get all feedback for a quote."""
+        rows = await self.conn.fetch("""
+            SELECT id, quote_id, rating, comment, labels, corrections, created_at
+            FROM quote_feedback
+            WHERE quote_id = $1
+            ORDER BY created_at DESC
+        """, quote_id)
+        
+        result = []
+        for feedback in rows:
+            result.append(QuoteFeedbackResponse(
+                id=feedback['id'],
+                quote_id=feedback['quote_id'],
+                rating=feedback['rating'],
+                comment=feedback['comment'],
+                labels=json.loads(feedback['labels']) if feedback['labels'] else None,
+                corrections=json.loads(feedback['corrections']) if feedback['corrections'] else None,
+                created_at=feedback['created_at'].isoformat()
+            ))
+        
+        return result
+    
+    async def get_feedback_analytics(self) -> dict:
+        """Get feedback analytics for GPT improvement."""
+        # Get overall feedback statistics
+        stats = await self.conn.fetchrow("""
+            SELECT 
+                COUNT(*) as total_feedback,
+                AVG(rating) as avg_rating,
+                COUNT(CASE WHEN rating >= 4 THEN 1 END) as positive_feedback,
+                COUNT(CASE WHEN rating <= 2 THEN 1 END) as negative_feedback
+            FROM quote_feedback
+        """)
+        
+        # Get accuracy distribution
+        accuracy_stats = await self.conn.fetchrow("""
+            SELECT 
+                COUNT(CASE WHEN labels->>'accuracy' = 'excellent' THEN 1 END) as excellent,
+                COUNT(CASE WHEN labels->>'accuracy' = 'good' THEN 1 END) as good,
+                COUNT(CASE WHEN labels->>'accuracy' = 'fair' THEN 1 END) as fair,
+                COUNT(CASE WHEN labels->>'accuracy' = 'poor' THEN 1 END) as poor
+            FROM quote_feedback
+            WHERE labels->>'accuracy' IS NOT NULL
+        """)
+        
+        # Get common issues
+        common_issues = await self.conn.fetch("""
+            SELECT 
+                'missing_products' as issue_type,
+                COUNT(*) as count
+            FROM quote_feedback 
+            WHERE labels->>'missing_products' IS NOT NULL AND labels->>'missing_products' != ''
+            UNION ALL
+            SELECT 
+                'incorrect_products' as issue_type,
+                COUNT(*) as count
+            FROM quote_feedback 
+            WHERE labels->>'incorrect_products' IS NOT NULL AND labels->>'incorrect_products' != ''
+            UNION ALL
+            SELECT 
+                'pricing_issues' as issue_type,
+                COUNT(*) as count
+            FROM quote_feedback 
+            WHERE labels->>'pricing_issues' IS NOT NULL AND labels->>'pricing_issues' != ''
+            UNION ALL
+            SELECT 
+                'quantity_issues' as issue_type,
+                COUNT(*) as count
+            FROM quote_feedback 
+            WHERE labels->>'quantity_issues' IS NOT NULL AND labels->>'quantity_issues' != ''
+            UNION ALL
+            SELECT 
+                'technical_specs' as issue_type,
+                COUNT(*) as count
+            FROM quote_feedback 
+            WHERE labels->>'technical_specs' IS NOT NULL AND labels->>'technical_specs' != ''
+            ORDER BY count DESC
+        """)
+        
+        # Get recent feedback for GPT context
+        recent_feedback = await self.conn.fetch("""
+            SELECT 
+                rating,
+                comment,
+                labels,
+                corrections,
+                created_at
+            FROM quote_feedback
+            ORDER BY created_at DESC
+            LIMIT 10
+        """)
+        
+        return {
+            "overall_stats": {
+                "total_feedback": stats['total_feedback'] or 0,
+                "average_rating": float(stats['avg_rating']) if stats['avg_rating'] else 0,
+                "positive_feedback": stats['positive_feedback'] or 0,
+                "negative_feedback": stats['negative_feedback'] or 0,
+            },
+            "accuracy_distribution": {
+                "excellent": accuracy_stats['excellent'] or 0,
+                "good": accuracy_stats['good'] or 0,
+                "fair": accuracy_stats['fair'] or 0,
+                "poor": accuracy_stats['poor'] or 0,
+            },
+            "common_issues": [
+                {"issue_type": row['issue_type'], "count": row['count']}
+                for row in common_issues
+            ],
+            "recent_feedback": [
+                {
+                    "rating": row['rating'],
+                    "comment": row['comment'],
+                    "labels": json.loads(row['labels']) if row['labels'] else None,
+                    "corrections": json.loads(row['corrections']) if row['corrections'] else None,
+                    "created_at": row['created_at'].isoformat()
+                }
+                for row in recent_feedback
+            ]
+        }

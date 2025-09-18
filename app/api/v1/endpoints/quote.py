@@ -183,6 +183,24 @@ async def delete_quote(
         raise HTTPException(status_code=500, detail=f"Failed to delete quote: {str(e)}")
 
 
+@router.get("/quote/{quote_id}/feedback", response_model=List[QuoteFeedbackResponse])
+async def get_quote_feedback(
+    quote_id: str,
+    db: Database = Depends(get_database)
+) -> List[QuoteFeedbackResponse]:
+    """Get feedback for a quote."""
+    try:
+        if not db._pool:
+            await db.connect()
+
+        async with db._pool.acquire() as conn:
+            quote_service = QuoteService(conn)
+            return await quote_service.get_feedback(quote_id)
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get feedback: {str(e)}")
+
+
 @router.post("/quote/{quote_id}/feedback", response_model=QuoteFeedbackResponse)
 async def add_quote_feedback(
     quote_id: str,
@@ -200,6 +218,23 @@ async def add_quote_feedback(
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to add feedback: {str(e)}")
+
+
+@router.get("/quote/feedback/analytics")
+async def get_feedback_analytics(
+    db: Database = Depends(get_database)
+) -> dict:
+    """Get feedback analytics for GPT improvement."""
+    try:
+        if not db._pool:
+            await db.connect()
+
+        async with db._pool.acquire() as conn:
+            quote_service = QuoteService(conn)
+            return await quote_service.get_feedback_analytics()
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get feedback analytics: {str(e)}")
 
 
 @router.get("/quote/health")

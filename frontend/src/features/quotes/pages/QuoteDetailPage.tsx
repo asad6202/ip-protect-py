@@ -1,29 +1,26 @@
 import { useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { 
-  ArrowLeft, 
   Edit, 
   Trash2, 
   Copy, 
   Download, 
   Send,
   MessageSquare,
-  Star,
-  ChevronDown
+  Star
 } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
 import EmptyState from '@/components/common/EmptyState'
 import ConfirmDialog from '@/components/common/ConfirmDialog'
 import { useGetQuote, useDeleteQuote, useUpdateQuote } from '../api'
+import { useGetFeedback } from '../../feedback/api'
+import FeedbackForm from '../../feedback/components/FeedbackForm'
 import { formatCurrency, formatDateTime } from '@/lib/format'
 
 const statusConfig = {
@@ -38,13 +35,13 @@ export default function QuoteDetailPage() {
   const { id } = useParams<{ id: string }>()
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [isEditingNotes, setIsEditingNotes] = useState(false)
-  const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [notes, setNotes] = useState('')
-  const [title, setTitle] = useState('')
 
   const { data: quote, isLoading, error } = useGetQuote(id!)
+  const { data: feedback, isLoading: feedbackLoading } = useGetFeedback(id!)
   const deleteQuote = useDeleteQuote()
   const updateQuote = useUpdateQuote()
+  const [showFeedbackForm, setShowFeedbackForm] = useState(false)
 
   const handleDelete = async () => {
     if (!quote) return
@@ -70,18 +67,6 @@ export default function QuoteDetailPage() {
     }
   }
 
-  const handleUpdateTitle = async () => {
-    if (!quote) return
-    try {
-      await updateQuote.mutateAsync({
-        id: quote.id,
-        data: { title: title.trim() || null }
-      })
-      setIsEditingTitle(false)
-    } catch (error) {
-      console.error('Error updating title:', error)
-    }
-  }
 
   if (isLoading) {
     return (
@@ -141,58 +126,7 @@ export default function QuoteDetailPage() {
   return (
     <div className="space-y-6">
       <PageHeader 
-        title={
-          isEditingTitle ? (
-            <div className="flex items-center space-x-2">
-              <Input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Enter quote title..."
-                className="text-2xl font-bold h-8"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleUpdateTitle()
-                  } else if (e.key === 'Escape') {
-                    setIsEditingTitle(false)
-                    setTitle('')
-                  }
-                }}
-              />
-              <Button
-                size="sm"
-                onClick={handleUpdateTitle}
-                disabled={updateQuote.isPending}
-              >
-                Save
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setIsEditingTitle(false)
-                  setTitle('')
-                }}
-              >
-                Cancel
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center space-x-2">
-              <span>{quote.title || 'Untitled Quote'}</span>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setTitle(quote.title || '')
-                  setIsEditingTitle(true)
-                }}
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-            </div>
-          )
-        }
+        title={quote.title || 'Untitled Quote'}
         description={`Created ${formatDateTime(quote.created_at)}`}
         showBackButton
         children={
@@ -302,6 +236,114 @@ export default function QuoteDetailPage() {
                     ))}
                   </TableBody>
                 </Table>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Feedback Section */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5" />
+                    Feedback
+                  </CardTitle>
+                  <CardDescription>
+                    Share your thoughts to help us improve
+                  </CardDescription>
+                </div>
+                <Button 
+                  onClick={() => setShowFeedbackForm(true)}
+                  className="flex items-center gap-2"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  Add Feedback
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {feedbackLoading ? (
+                <div className="space-y-4">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="h-4 bg-muted rounded w-1/4 mb-2"></div>
+                      <div className="h-3 bg-muted rounded w-3/4 mb-2"></div>
+                      <div className="h-3 bg-muted rounded w-1/2"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : feedback && feedback.length > 0 ? (
+                <div className="space-y-4">
+                  {feedback.map((fb) => (
+                    <div key={fb.id} className="border rounded-lg p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          {fb.rating && (
+                            <div className="flex items-center gap-1">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <Star
+                                  key={star}
+                                  className={`h-4 w-4 ${
+                                    star <= fb.rating! 
+                                      ? 'text-yellow-400 fill-current' 
+                                      : 'text-gray-300'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          )}
+                          <span className="text-sm text-muted-foreground">
+                            {formatDateTime(fb.created_at)}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {fb.comment && (
+                        <p className="text-sm mb-3">{fb.comment}</p>
+                      )}
+                      
+                      {fb.labels && (
+                        <div className="space-y-2">
+                          {(fb.labels as any).issues && (
+                            <div>
+                              <h4 className="text-sm font-medium text-red-600">Issues:</h4>
+                              <p className="text-sm text-muted-foreground">{(fb.labels as any).issues}</p>
+                            </div>
+                          )}
+                          {(fb.labels as any).suggestions && (
+                            <div>
+                              <h4 className="text-sm font-medium text-blue-600">Suggestions:</h4>
+                              <p className="text-sm text-muted-foreground">{(fb.labels as any).suggestions}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <MessageSquare className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No feedback yet</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Be the first to provide feedback on this quote
+                  </p>
+                  <Button onClick={() => setShowFeedbackForm(true)}>
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Add Feedback
+                  </Button>
+                </div>
+              )}
+
+              {/* Feedback Form */}
+              {showFeedbackForm && (
+                <div className="mt-6">
+                  <FeedbackForm
+                    quoteId={id!}
+                    onSuccess={() => setShowFeedbackForm(false)}
+                  />
+                </div>
               )}
             </CardContent>
           </Card>
@@ -465,6 +507,7 @@ export default function QuoteDetailPage() {
           </Card>
         </div>
       </div>
+
 
       {/* Delete Confirmation */}
       <ConfirmDialog
