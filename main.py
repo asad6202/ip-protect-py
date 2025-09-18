@@ -62,7 +62,7 @@ async def query_endpoint(payload: QueryRequest) -> QueryResponse:
     return QueryResponse(results=results, sql=sql)
 
 
-@app.get("/", response_class=HTMLResponse)
+@app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
 async def index(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         "index.html",
