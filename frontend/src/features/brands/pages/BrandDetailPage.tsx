@@ -11,7 +11,7 @@ import BrandForm from '../components/BrandForm'
 import UploadDialog from '../../uploads/components/UploadDialog'
 import { useGetBrand, useDeleteBrand } from '../api'
 import { useListUploads, useDeleteUpload } from '../../uploads/api'
-import { formatDateTime } from '@/lib/format'
+import { formatDateTime } from '@/lib-utils/format'
 
 export default function BrandDetailPage() {
   const { id } = useParams<{ id: string }>()

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import api from '@/lib/api'
-import { Product, ProductFilters, PaginatedResponse } from '@/lib/types'
+import api from '@/lib-utils/api'
+import { Product, ProductFilters, PaginatedResponse } from '@/lib-utils/types'
 
 // Fetch all products with filters
 export function useListProducts(filters: ProductFilters = {}) {

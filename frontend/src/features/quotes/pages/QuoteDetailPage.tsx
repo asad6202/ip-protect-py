@@ -21,7 +21,7 @@ import ConfirmDialog from '@/components/common/ConfirmDialog'
 import { useGetQuote, useDeleteQuote, useUpdateQuote } from '../api'
 import { useGetFeedback } from '../../feedback/api'
 import FeedbackForm from '../../feedback/components/FeedbackForm'
-import { formatCurrency, formatDateTime } from '@/lib/format'
+import { formatCurrency, formatDateTime } from '@/lib-utils/format'
 
 const statusConfig = {
   draft: { color: 'bg-gray-100 text-gray-800', label: 'Draft' },

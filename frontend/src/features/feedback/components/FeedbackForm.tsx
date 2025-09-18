@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Star, Send, AlertCircle, CheckCircle, XCircle, HelpCircle } from 'lucide-react'
 import { useCreateFeedback } from '../api'
-import { CreateFeedbackRequest } from '@/lib/types'
+import { CreateFeedbackRequest } from '@/lib-utils/types'
 
 const feedbackSchema = z.object({
   rating: z.number().min(1).max(5).optional(),

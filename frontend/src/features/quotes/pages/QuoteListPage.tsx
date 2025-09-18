@@ -10,7 +10,7 @@ import PageHeader from '@/components/common/PageHeader'
 import EmptyState from '@/components/common/EmptyState'
 import ConfirmDialog from '@/components/common/ConfirmDialog'
 import { useListQuotes, useDeleteQuote } from '../api'
-import { formatCurrency, formatRelativeTime } from '@/lib/format'
+import { formatCurrency, formatRelativeTime } from '@/lib-utils/format'
 
 const statusConfig = {
   draft: { color: 'bg-gray-100 text-gray-800', label: 'Draft' },

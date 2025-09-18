@@ -7,8 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { useListProducts } from '@/features/products/api'
-import { Product } from '@/lib/types'
-import { formatCurrency } from '@/lib/format'
+import { Product } from '@/lib-utils/types'
+import { formatCurrency } from '@/lib-utils/format'
 
 interface ProductSearchDialogProps {
   open: boolean

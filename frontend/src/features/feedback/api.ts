@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import api from '@/lib/api'
-import { Feedback, CreateFeedbackRequest } from '@/lib/types'
+import api from '@/lib-utils/api'
+import { Feedback, CreateFeedbackRequest } from '@/lib-utils/types'
 
 // Fetch feedback for a quote
 export function useGetFeedback(quoteId: string) {

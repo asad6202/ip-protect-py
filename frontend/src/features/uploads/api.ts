@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import api from '@/lib/api'
-import { ProductUpload } from '@/lib/types'
+import api from '@/lib-utils/api'
+import { ProductUpload } from '@/lib-utils/types'
 
 // Fetch all uploads
 export function useListUploads(brandId?: string) {

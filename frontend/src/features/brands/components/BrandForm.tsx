@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Brand, CreateBrandRequest, UpdateBrandRequest } from '@/lib/types'
+import { Brand, CreateBrandRequest, UpdateBrandRequest } from '@/lib-utils/types'
 import { useCreateBrand, useUpdateBrand } from '../api'
 
 const brandSchema = z.object({

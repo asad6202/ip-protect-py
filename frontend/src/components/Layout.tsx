@@ -12,7 +12,7 @@ import {
   Menu,
   ChevronLeft
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib-utils/utils'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: Home },

@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { RuleSet, CreateRuleSetRequest, UpdateRuleSetRequest } from '@/lib/types'
+import { RuleSet, CreateRuleSetRequest, UpdateRuleSetRequest } from '@/lib-utils/types'
 import { useCreateRuleSet, useUpdateRuleSet } from '../api'
 
 const ruleSetSchema = z.object({

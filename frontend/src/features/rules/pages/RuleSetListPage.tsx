@@ -10,7 +10,7 @@ import EmptyState from '@/components/common/EmptyState'
 import ConfirmDialog from '@/components/common/ConfirmDialog'
 import RuleSetForm from '../components/RuleSetForm'
 import { useListRuleSets, useDeleteRuleSet } from '../api'
-import { formatDateTime } from '@/lib/format'
+import { formatDateTime } from '@/lib-utils/format'
 
 export default function RuleSetListPage() {
   const [showForm, setShowForm] = useState(false)

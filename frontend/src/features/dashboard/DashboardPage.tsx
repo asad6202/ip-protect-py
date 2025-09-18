@@ -9,8 +9,8 @@ import {
   Plus,
   Settings
 } from 'lucide-react'
-import { formatCurrency, formatRelativeTime } from '@/lib/format'
-import { Quote, ProductUpload } from '@/lib/types'
+import { formatCurrency, formatRelativeTime } from '@/lib-utils/format'
+import { Quote, ProductUpload } from '@/lib-utils/types'
 
 // Mock data for now - replace with actual API calls
 const mockStats = {

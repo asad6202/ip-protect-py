@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import api from '@/lib/api'
-import { RuleSet, Rule, CreateRuleSetRequest, UpdateRuleSetRequest, CreateRuleRequest, UpdateRuleRequest } from '@/lib/types'
+import api from '@/lib-utils/api'
+import { RuleSet, Rule, CreateRuleSetRequest, UpdateRuleSetRequest, CreateRuleRequest, UpdateRuleRequest } from '@/lib-utils/types'
 
 // Rule Sets API
 export function useListRuleSets() {

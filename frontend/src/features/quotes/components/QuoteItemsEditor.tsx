@@ -5,8 +5,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Trash2, Search } from 'lucide-react'
-import { QuoteItem, Product } from '@/lib/types'
-import { formatCurrency } from '@/lib/format'
+import { QuoteItem, Product } from '@/lib-utils/types'
+import { formatCurrency } from '@/lib-utils/format'
 import ProductSearchDialog from './ProductSearchDialog'
 
 interface QuoteItemsEditorProps {

@@ -10,7 +10,7 @@ import EmptyState from '@/components/common/EmptyState'
 import ConfirmDialog from '@/components/common/ConfirmDialog'
 import UploadDialog from '../components/UploadDialog'
 import { useListUploads, useDeleteUpload } from '../api'
-import { formatDateTime, formatRelativeTime } from '@/lib/format'
+import { formatDateTime, formatRelativeTime } from '@/lib-utils/format'
 
 const statusConfig = {
   uploaded: { icon: Clock, color: 'bg-yellow-100 text-yellow-800', label: 'Uploaded' },

@@ -9,7 +9,7 @@ import EmptyState from '@/components/common/EmptyState'
 import ConfirmDialog from '@/components/common/ConfirmDialog'
 import BrandForm from '../components/BrandForm'
 import { useListBrands, useDeleteBrand } from '../api'
-import { formatDateTime } from '@/lib/format'
+import { formatDateTime } from '@/lib-utils/format'
 
 export default function BrandListPage() {
   const [showForm, setShowForm] = useState(false)

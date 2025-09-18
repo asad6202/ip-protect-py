@@ -9,7 +9,7 @@ import { Search, FileText, Eye, Clock, CheckCircle, XCircle } from 'lucide-react
 import PageHeader from '@/components/common/PageHeader'
 import EmptyState from '@/components/common/EmptyState'
 import { useListPromptRuns } from '../api'
-import { formatDateTime, formatRelativeTime } from '@/lib/format'
+import { formatDateTime, formatRelativeTime } from '@/lib-utils/format'
 
 export default function PromptRunListPage() {
   const [search, setSearch] = useState('')

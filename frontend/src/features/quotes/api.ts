@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import api from '@/lib/api'
-import { Quote, CreateQuoteRequest, UpdateQuoteRequest, QuoteGenResponse, PaginatedResponse } from '@/lib/types'
+import api from '@/lib-utils/api'
+import { Quote, CreateQuoteRequest, UpdateQuoteRequest, QuoteGenResponse, PaginatedResponse } from '@/lib-utils/types'
 
 // Generate quote from prompt
 export function useGenerateQuote() {

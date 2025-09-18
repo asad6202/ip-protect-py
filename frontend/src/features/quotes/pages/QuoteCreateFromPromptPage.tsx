@@ -7,9 +7,9 @@ import PageHeader from '@/components/common/PageHeader'
 import QuotePromptForm from '../components/QuotePromptForm'
 import QuoteItemsEditor from '../components/QuoteItemsEditor'
 import { useCreateQuote } from '../api'
-import { QuoteItem, QuoteGenResponse } from '@/lib/types'
+import { QuoteItem, QuoteGenResponse } from '@/lib-utils/types'
 import { useToast } from '@/components/ui/use-toast'
-import { formatCurrency } from '@/lib/format'
+import { formatCurrency } from '@/lib-utils/format'
 
 export default function QuoteCreateFromPromptPage() {
   const navigate = useNavigate()

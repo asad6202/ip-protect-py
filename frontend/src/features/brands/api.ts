@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import api from '@/lib/api'
-import { Brand, CreateBrandRequest, UpdateBrandRequest } from '@/lib/types'
+import api from '@/lib-utils/api'
+import { Brand, CreateBrandRequest, UpdateBrandRequest } from '@/lib-utils/types'
 
 // Fetch all brands
 export function useListBrands() {

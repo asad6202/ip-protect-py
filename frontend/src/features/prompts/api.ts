@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import api from '@/lib/api'
-import { PromptRun } from '@/lib/types'
+import api from '@/lib-utils/api'
+import { PromptRun } from '@/lib-utils/types'
 
 // Fetch all prompt runs
 export function useListPromptRuns() {

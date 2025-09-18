@@ -16,7 +16,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Rule, CreateRuleRequest, UpdateRuleRequest } from '@/lib/types'
+import { Rule, CreateRuleRequest, UpdateRuleRequest } from '@/lib-utils/types'
 import { useCreateRule, useUpdateRule } from '../api'
 
 const ruleSchema = z.object({

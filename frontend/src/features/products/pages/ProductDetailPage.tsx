@@ -8,7 +8,7 @@ import PageHeader from '@/components/common/PageHeader'
 import EmptyState from '@/components/common/EmptyState'
 import { useGetProduct } from '../api'
 import { useGetBrand } from '../../brands/api'
-import { formatCurrency, formatDateTime } from '@/lib/format'
+import { formatCurrency, formatDateTime } from '@/lib-utils/format'
 
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>()

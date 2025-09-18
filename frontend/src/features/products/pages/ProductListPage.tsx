@@ -23,7 +23,7 @@ import { Package, Eye, Search, X } from "lucide-react";
 import EmptyState from "@/components/common/EmptyState";
 import { useListProducts, useProductFamilies } from "../api";
 import { useListBrands } from "@/features/brands/api";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency } from "@/lib-utils/format";
 
 export default function ProductListPage() {
   const [searchParams] = useSearchParams();

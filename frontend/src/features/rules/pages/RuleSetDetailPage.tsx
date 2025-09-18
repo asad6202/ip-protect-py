@@ -11,7 +11,7 @@ import EmptyState from '@/components/common/EmptyState'
 import ConfirmDialog from '@/components/common/ConfirmDialog'
 import RuleForm from '../components/RuleForm'
 import { useGetRuleSet, useListRules, useDeleteRule } from '../api'
-import { formatDateTime } from '@/lib/format'
+import { formatDateTime } from '@/lib-utils/format'
 
 export default function RuleSetDetailPage() {
   const { id } = useParams<{ id: string }>()
