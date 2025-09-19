@@ -316,10 +316,10 @@ export default function ProductListPage() {
             {/* Table Container with Scrollable Body */}
             <Card className="shadow-sm border-border/50 flex-1 min-h-0 overflow-hidden">
               <CardContent className="p-0 h-full flex flex-col">
-                {/* Table Header - Fixed */}
-                <div className="border-b border-border/50 bg-background flex-shrink-0 sticky top-0 z-10">
+                {/* Single Table with Fixed Header and Scrollable Body */}
+                <div className="flex-1 overflow-y-auto max-h-[calc(100vh-400px)] sm:max-h-[calc(100vh-350px)] lg:max-h-[calc(100vh-300px)]">
                   <Table>
-                    <TableHeader>
+                    <TableHeader className="sticky top-0 z-10 bg-background">
                       <TableRow className="hover:bg-transparent">
                         <TableHead className="font-semibold text-foreground h-12">
                           SKU
@@ -341,12 +341,6 @@ export default function ProductListPage() {
                         </TableHead>
                       </TableRow>
                     </TableHeader>
-                  </Table>
-                </div>
-
-                {/* Table Body - Scrollable with responsive height */}
-                <div className="flex-1 overflow-y-auto max-h-[calc(100vh-400px)] sm:max-h-[calc(100vh-350px)] lg:max-h-[calc(100vh-300px)]">
-                  <Table>
                     <TableBody>
                       {products.map((product, index) => (
                         <TableRow
