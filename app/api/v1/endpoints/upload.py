@@ -6,8 +6,9 @@ import os
 import uuid
 import csv
 import pandas as pd
+import asyncio
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, BackgroundTasks
 from pydantic import BaseModel
 from db import Database
 
@@ -168,7 +169,8 @@ async def get_upload(
 async def upload_file(
     file: UploadFile = File(...),
     brand_id: Optional[str] = Form(None),
-    db: Database = Depends(get_database)
+    db: Database = Depends(get_database),
+    background_tasks: BackgroundTasks = BackgroundTasks()
 ) -> UploadResponse:
     """Upload a CSV file and process it."""
     try:
@@ -256,18 +258,31 @@ async def upload_file(
                 'uploaded'
             )
             
-            # Process the file in the background
-            await process_upload_file(conn, upload_id, stored_path, brand_id, df)
+            # Update status to queued for background processing
+            await conn.execute(
+                "UPDATE product_uploads SET status = 'queued' WHERE id = $1",
+                upload_id
+            )
             
+            # Queue the file processing in the background (non-blocking)
+            background_tasks.add_task(
+                process_upload_file_async, 
+                upload_id, 
+                stored_path, 
+                brand_id, 
+                df.copy()  # Pass a copy to avoid any threading issues
+            )
+            
+            # Return immediately with queued status
             return UploadResponse(
-                id=str(row['id']),
-                brand_id=row.get('brand_id'),
-                original_name=row['original_name'],
-                row_count=row.get('row_count'),
-                status=row['status'],
-                message=row.get('message'),
+                id=upload_id,
+                brand_id=brand_id,
+                original_name=file.filename,
+                row_count=row_count,
+                status='queued',
+                message='Upload queued for processing',
                 created_at=row['created_at'].isoformat(),
-                processed_at=row['processed_at'].isoformat() if row.get('processed_at') else None
+                processed_at=None
             )
     
     except HTTPException:
@@ -395,6 +410,216 @@ async def process_upload_file(conn, upload_id: str, file_path: str, brand_id: Op
             "UPDATE product_uploads SET status = 'failed', message = $1, processed_at = NOW() WHERE id = $2",
             f"Processing failed: {str(e)}", upload_id
         )
+
+async def process_upload_file_async(upload_id: str, file_path: str, brand_id: Optional[str], df: pd.DataFrame):
+    """Process uploaded file asynchronously using bulk operations for optimal performance."""
+    db = Database()
+    
+    try:
+        await db.connect()
+        
+        async with db._pool.acquire() as conn:
+            # Update status to processing with started_at timestamp
+            await conn.execute(
+                "UPDATE product_uploads SET status = 'processing', started_at = NOW() WHERE id = $1",
+                upload_id
+            )
+            
+            # Validate brand exists
+            if not brand_id:
+                raise Exception("Brand ID is required for product upload")
+            
+            brand_exists = await conn.fetchval(
+                "SELECT EXISTS(SELECT 1 FROM brands WHERE id = $1)", brand_id
+            )
+            if not brand_exists:
+                raise Exception(f"Brand with ID {brand_id} does not exist")
+            
+            # Prepare bulk data for insertion
+            bulk_data = []
+            error_data = []
+            processed_rows = 0
+            
+            for index, row in df.iterrows():
+                try:
+                    # Extract and validate basic fields
+                    sku = str(row.get('sku', '')).strip()
+                    description = str(row.get('description', '')).strip()
+                    price_str = str(row.get('price', '0'))
+                    currency = str(row.get('currency', 'USD')).strip().upper()
+                    family = str(row.get('family', '')).strip()
+                    status = str(row.get('status', 'active')).strip().lower()
+                    
+                    if not sku or not description:
+                        error_data.append((
+                            upload_id,
+                            index + 1,
+                            None,
+                            f"Missing required fields (SKU: {sku}, description: {description})",
+                            str(dict(row))[:500]  # Truncate to avoid huge data
+                        ))
+                        continue
+                    
+                    # Parse price
+                    import re
+                    try:
+                        price = float(re.sub(r'[^\d.]', '', price_str))
+                    except ValueError:
+                        price = 0.0
+                    
+                    # Create search text and raw_json
+                    search_text = f"{sku} {description} {family}".strip()
+                    import json
+                    raw_json = json.dumps(dict(row))
+                    
+                    # Prepare data for bulk insert (matching the database schema)
+                    product_data = (
+                        str(uuid.uuid4()),  # id
+                        brand_id,           # brand_id
+                        sku,               # sku
+                        description,       # description  
+                        price,             # price
+                        currency,          # currency
+                        family,            # family
+                        status == 'active', # active
+                        str(row.get('form_factor', '')).strip() if pd.notna(row.get('form_factor')) else None,
+                        bool(row.get('outdoor')) if pd.notna(row.get('outdoor')) else None,
+                        bool(row.get('poe')) if pd.notna(row.get('poe')) else None,
+                        bool(row.get('poe_plus')) if pd.notna(row.get('poe_plus')) else None,
+                        int(row.get('ir_range_m')) if pd.notna(row.get('ir_range_m')) and str(row.get('ir_range_m')).isdigit() else None,
+                        float(row.get('resolution_mp')) if pd.notna(row.get('resolution_mp')) else None,
+                        bool(row.get('vandal_ik10')) if pd.notna(row.get('vandal_ik10')) else None,
+                        int(row.get('nvr_channels')) if pd.notna(row.get('nvr_channels')) and str(row.get('nvr_channels')).isdigit() else None,
+                        int(row.get('switch_ports')) if pd.notna(row.get('switch_ports')) and str(row.get('switch_ports')).isdigit() else None,
+                        bool(row.get('is_accessory', False)),
+                        str(row.get('accessory_type', '')).strip() if pd.notna(row.get('accessory_type')) else None,
+                        search_text,       # search_text
+                        raw_json          # raw_json
+                    )
+                    
+                    bulk_data.append(product_data)
+                    processed_rows += 1
+                    
+                    # Process in batches of 500 for optimal performance
+                    if len(bulk_data) >= 500:
+                        await perform_bulk_insert(conn, bulk_data)
+                        
+                        # Update progress
+                        await conn.execute(
+                            "UPDATE product_uploads SET processed_rows = $1 WHERE id = $2",
+                            processed_rows, upload_id
+                        )
+                        
+                        bulk_data = []  # Reset for next batch
+                        
+                except Exception as e:
+                    error_data.append((
+                        upload_id,
+                        index + 1,
+                        None,
+                        f"Processing error: {str(e)}",
+                        str(dict(row))[:500]
+                    ))
+            
+            # Insert remaining data if any
+            if bulk_data:
+                await perform_bulk_insert(conn, bulk_data)
+            
+            # Insert error records if any
+            if error_data:
+                await conn.executemany(
+                    """INSERT INTO product_upload_errors 
+                       (upload_id, line_number, column_name, error_message, raw_data) 
+                       VALUES ($1, $2, $3, $4, $5)""",
+                    error_data
+                )
+            
+            # Final status update
+            error_count = len(error_data)
+            total_processed = processed_rows
+            
+            await conn.execute("""
+                UPDATE product_uploads 
+                SET status = $1, processed_rows = $2, error_count = $3, 
+                    message = $4, processed_at = NOW() 
+                WHERE id = $5
+            """, 
+                'completed' if error_count == 0 else 'failed',
+                total_processed,
+                error_count,
+                f"Successfully processed {total_processed} products" + (f" with {error_count} errors" if error_count > 0 else ""),
+                upload_id
+            )
+            
+            # Clean up file after successful processing
+            try:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    print(f"Successfully deleted uploaded file: {file_path}")
+            except Exception as e:
+                print(f"Warning: Failed to delete uploaded file {file_path}: {str(e)}")
+                
+    except Exception as e:
+        # Update status to failed on any critical error using a fresh connection
+        print(f"Upload processing failed for {upload_id}: {str(e)}")
+        try:
+            # Create a new database connection for error handling
+            error_db = Database()
+            await error_db.connect()
+            async with error_db._pool.acquire() as error_conn:
+                await error_conn.execute("""
+                    UPDATE product_uploads 
+                    SET status = 'failed', message = $1, processed_at = NOW() 
+                    WHERE id = $2
+                """, f"Processing failed: {str(e)}", upload_id)
+            await error_db.close()
+        except Exception as error_e:
+            print(f"Failed to update error status for {upload_id}: {str(error_e)}")
+    
+    finally:
+        # Ensure database connection is closed
+        try:
+            if db and db._pool:
+                await db.close()
+        except:
+            pass
+
+async def perform_bulk_insert(conn, bulk_data: list):
+    """Perform bulk insert using asyncpg's executemany for optimal performance with transaction safety."""
+    if not bulk_data:
+        return
+    
+    sql = """
+        INSERT INTO products (
+            id, brand_id, sku, description, price, currency, family, active,
+            form_factor, outdoor, poe, poe_plus, ir_range_m, resolution_mp,
+            vandal_ik10, nvr_channels, switch_ports, is_accessory, accessory_type,
+            search_text, raw_json
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+        ON CONFLICT (sku, brand_id) DO UPDATE SET
+            description = EXCLUDED.description,
+            price = EXCLUDED.price,
+            currency = EXCLUDED.currency,
+            family = EXCLUDED.family,
+            active = EXCLUDED.active,
+            form_factor = EXCLUDED.form_factor,
+            outdoor = EXCLUDED.outdoor,
+            poe = EXCLUDED.poe,
+            poe_plus = EXCLUDED.poe_plus,
+            ir_range_m = EXCLUDED.ir_range_m,
+            resolution_mp = EXCLUDED.resolution_mp,
+            vandal_ik10 = EXCLUDED.vandal_ik10,
+            nvr_channels = EXCLUDED.nvr_channels,
+            switch_ports = EXCLUDED.switch_ports,
+            is_accessory = EXCLUDED.is_accessory,
+            accessory_type = EXCLUDED.accessory_type,
+            search_text = EXCLUDED.search_text,
+            raw_json = EXCLUDED.raw_json
+    """
+    
+    # Use transaction for data integrity
+    async with conn.transaction():
+        await conn.executemany(sql, bulk_data)
 
 @router.delete("/uploads/{upload_id}")
 async def delete_upload(
