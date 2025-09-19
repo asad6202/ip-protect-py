@@ -237,7 +237,10 @@ async def upload_file(
                     status TEXT NOT NULL DEFAULT 'uploaded',
                     message TEXT,
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                    processed_at TIMESTAMP WITH TIME ZONE
+                    processed_at TIMESTAMP WITH TIME ZONE,
+                    started_at TIMESTAMP WITH TIME ZONE,
+                    processed_rows INTEGER DEFAULT 0,
+                    error_count INTEGER DEFAULT 0
                 )
             """)
             
@@ -620,6 +623,77 @@ async def perform_bulk_insert(conn, bulk_data: list):
     # Use transaction for data integrity
     async with conn.transaction():
         await conn.executemany(sql, bulk_data)
+
+@router.get("/uploads/{upload_id}/progress")
+async def get_upload_progress(upload_id: str):
+    """Get real-time progress for an upload by ID."""
+    db = Database()
+    
+    try:
+        await db.connect()
+        async with db._pool.acquire() as conn:
+            result = await conn.fetchrow("""
+                SELECT 
+                    id,
+                    brand_id,
+                    original_name,
+                    row_count,
+                    status,
+                    message,
+                    created_at,
+                    processed_at,
+                    processed_rows,
+                    error_count,
+                    started_at
+                FROM product_uploads 
+                WHERE id = $1
+            """, upload_id)
+            
+            if not result:
+                raise HTTPException(status_code=404, detail="Upload not found")
+            
+            upload_data = dict(result)
+            
+            # Ensure safe integer defaults for null values
+            processed_rows = upload_data['processed_rows'] or 0
+            error_count = upload_data['error_count'] or 0
+            total_rows = upload_data['row_count'] or 0
+            
+            # Calculate progress percentage safely
+            progress_percent = 0
+            if total_rows > 0 and processed_rows >= 0:
+                progress_percent = (processed_rows / total_rows) * 100
+                
+            # Format response with safe defaults
+            return {
+                "upload_id": upload_data['id'],
+                "brand_id": upload_data['brand_id'],
+                "filename": upload_data['original_name'],
+                "status": upload_data['status'],
+                "message": upload_data['message'],
+                "total_rows": total_rows,
+                "processed_rows": processed_rows,
+                "error_count": error_count,
+                "progress_percent": round(progress_percent, 1),
+                "created_at": upload_data['created_at'].isoformat() if upload_data['created_at'] else None,
+                "started_at": upload_data['started_at'].isoformat() if upload_data['started_at'] else None,
+                "completed_at": upload_data['processed_at'].isoformat() if upload_data['processed_at'] else None,
+                "is_processing": upload_data['status'] in ['queued', 'processing'],
+                "is_completed": upload_data['status'] in ['completed', 'failed']
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error getting upload progress: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get upload progress")
+    finally:
+        try:
+            if db._pool:
+                await db.close()
+        except:
+            pass
+
 
 @router.delete("/uploads/{upload_id}")
 async def delete_upload(

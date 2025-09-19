@@ -45,6 +45,25 @@ export function useUploadFile() {
   })
 }
 
+// Progress tracking hook with polling
+export function useUploadProgress(uploadId: string, enabled: boolean = true) {
+  return useQuery({
+    queryKey: ['upload-progress', uploadId],
+    queryFn: async () => {
+      const response = await api.get(`/api/v1/uploads/${uploadId}/progress`)
+      return response.data
+    },
+    enabled: enabled && !!uploadId,
+    refetchInterval: (query) => {
+      // Poll every 2 seconds if still processing, stop when completed
+      const data = query.state.data
+      return data?.is_processing ? 2000 : false
+    },
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+  })
+}
+
 // Delete upload
 export function useDeleteUpload() {
   const queryClient = useQueryClient()
