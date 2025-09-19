@@ -5,7 +5,7 @@ interface LogoProps {
   size?: 'sm' | 'md' | 'lg'
 }
 
-export default function Logo({ className, size = 'md' }: LogoProps) {
+export default function Logo({ className }: LogoProps) {
   return (
     <div className={cn("flex items-center", className)}>
       {/* Logo Image Only */}

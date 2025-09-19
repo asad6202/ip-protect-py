@@ -131,6 +131,7 @@ export default function RuleForm({
         await updateRule.mutateAsync({
           id: rule.id,
           data: ruleData as UpdateRuleRequest,
+          ruleSetId: ruleSetId,
         })
       } else {
         await createRule.mutateAsync(ruleData as CreateRuleRequest)

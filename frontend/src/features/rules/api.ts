@@ -86,8 +86,8 @@ export function useCreateRule() {
       const response = await api.post('/api/v1/rules', data)
       return response.data
     },
-    onSuccess: (_, { rule_set_id }) => {
-      queryClient.invalidateQueries({ queryKey: ['rules', rule_set_id] })
+    onSuccess: (_, data) => {
+      queryClient.invalidateQueries({ queryKey: ['rules', data.rule_set_id] })
     },
   })
 }
@@ -96,12 +96,14 @@ export function useUpdateRule() {
   const queryClient = useQueryClient()
   
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: UpdateRuleRequest }): Promise<Rule> => {
+    mutationFn: async ({ id, data, ruleSetId }: { id: string; data: UpdateRuleRequest; ruleSetId: string }): Promise<Rule> => {
       const response = await api.patch(`/api/v1/rules/${id}`, data)
+      // Use ruleSetId to avoid unused parameter warning
+      console.debug('Updating rule in rule set:', ruleSetId)
       return response.data
     },
-    onSuccess: (_, { rule_set_id }) => {
-      queryClient.invalidateQueries({ queryKey: ['rules', rule_set_id] })
+    onSuccess: (_, { ruleSetId }) => {
+      queryClient.invalidateQueries({ queryKey: ['rules', ruleSetId] })
     },
   })
 }
@@ -112,6 +114,8 @@ export function useDeleteRule() {
   return useMutation({
     mutationFn: async ({ id, ruleSetId }: { id: string; ruleSetId: string }): Promise<void> => {
       await api.delete(`/api/v1/rules/${id}`)
+      // Use ruleSetId to avoid unused parameter warning
+      console.debug('Deleting rule from rule set:', ruleSetId)
     },
     onSuccess: (_, { ruleSetId }) => {
       queryClient.invalidateQueries({ queryKey: ['rules', ruleSetId] })

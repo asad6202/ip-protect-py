@@ -22,7 +22,7 @@ const statusConfig = {
 
 // Individual Upload Card with Progress Tracking
 function UploadCard({ upload, onDelete }: { upload: any; onDelete: (id: string) => void }) {
-  const statusInfo = statusConfig[upload.status] || statusConfig.uploaded
+  const statusInfo = statusConfig[upload.status as keyof typeof statusConfig] || statusConfig.uploaded
   const StatusIcon = statusInfo.icon
   
   // Use progress polling for processing uploads
