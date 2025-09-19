@@ -37,14 +37,7 @@ class QuoteService:
             for i, item_want in enumerate(intent['items']):
                 quantity = max(1, int(item_want.get('quantity', 1)))
                 
-                # Skip switch/NVR items if we have global preferences (to avoid duplicates)
-                family = item_want.get('family') or ''
-                if (family.lower() == 'switch' and 
-                    'global' in intent and 'switchPorts' in intent['global']):
-                    continue
-                if (family.lower() == 'nvr' and 
-                    'global' in intent and 'nvrChannels' in intent['global']):
-                    continue
+                # Process all items - no skipping based on global preferences
                 
                 # Search for products
                 candidates = await self.retrieval.search_products(item_want, prompt)
@@ -217,14 +210,7 @@ class QuoteService:
             for i, item_want in enumerate(intent['items']):
                 quantity = max(1, int(item_want.get('quantity', 1)))
                 
-                # Skip switch/NVR items if we have global preferences (to avoid duplicates)
-                family = item_want.get('family') or ''
-                if (family.lower() == 'switch' and 
-                    'global' in intent and 'switchPorts' in intent['global']):
-                    continue
-                if (family.lower() == 'nvr' and 
-                    'global' in intent and 'nvrChannels' in intent['global']):
-                    continue
+                # Process all items - no skipping based on global preferences
                 
                 # Search for products
                 candidates = await self.retrieval.search_products(item_want, request.prompt)

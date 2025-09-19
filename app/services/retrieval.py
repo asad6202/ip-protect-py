@@ -40,7 +40,8 @@ FAMILY_BAN = {
         "mount", "bracket", "housing", "cover", "smoked dome", "cap", "weather cap",
         "sunshade", "sun shade", "sunshield", "shroud", "skin", "bubble", "clear dome",
         "stand", "joystick", "microphone", "mic", "speaker", "encoder", "decoder",
-        "appliance", "kit", "recessed", "dome cover", "rack", "rack mount", "mount kit"
+        "appliance", "kit", "recessed", "dome cover", "rack", "rack mount", "mount kit",
+        "cable", "cables", "connector", "connectors", "wire", "wires", "cord", "cords"
     ],
     "nvr": [
         "adapter", "charger", "license", "software", "tamper", "battery",
@@ -56,20 +57,67 @@ FAMILY_BAN = {
 }
 
 TOKEN_VARIANTS = {
-    "poe":     ["poe", "poe+"],
-    "poe+":    ["poe+", "802.3at"],
-    "ir-30m":  ["ir 30m", "ir-30m", "infrared 30m", "infrared 30 m", "exir 30m"],
-    "ir-60m":  ["ir 60m", "ir-60m", "infrared 60m", "infrared 60 m", "exir 60m"],
-    "outdoor": ["outdoor", "ip66", "ip67", "weatherproof"],
-    "indoor":  ["indoor"],
-    "vandal":  ["vandal", "ik10"],
-    "audio":   ["audio", "microphone"],
-    "4k":      ["4k", "uhd"],
-    "1080p":   ["1080p", "full hd", "fhd"],
-    "dome":    ["dome"],
-    "bullet":  ["bullet"],
-    "ptz":     ["ptz"],
-    "turret":  ["turret"],
+    # Power over Ethernet variants
+    "poe":     ["poe", "poe+", "power over ethernet", "power over ethernet+", "poe plus", "poe+", "802.3af", "802.3at", "ethernet power", "network power"],
+    "poe+":    ["poe+", "poe plus", "802.3at", "802.3af+", "high power poe", "poe plus", "poe+", "ethernet power plus"],
+    
+    # Infrared/Night vision variants
+    "ir-30m":  ["ir 30m", "ir-30m", "infrared 30m", "infrared 30 m", "exir 30m", "ir30m", "ir 30", "30m ir", "30m infrared", "night vision 30m", "night vision 30 m", "30m night", "ir range 30m", "30m range", "30 meter ir", "30 meter infrared"],
+    "ir-60m":  ["ir 60m", "ir-60m", "infrared 60m", "infrared 60 m", "exir 60m", "ir60m", "ir 60", "60m ir", "60m infrared", "night vision 60m", "night vision 60 m", "60m night", "ir range 60m", "60m range", "60 meter ir", "60 meter infrared"],
+    
+    # Location variants
+    "outdoor": ["outdoor", "outdoors", "outside", "external", "exterior", "ip66", "ip67", "ip68", "weatherproof", "weather resistant", "weather-resistant", "waterproof", "water resistant", "water-resistant", "weather sealed", "weather-sealed", "outdoor rated", "outdoor-rated", "exterior grade", "exterior-grade", "outdoor use", "outdoor use", "for outdoor", "outdoor camera", "outdoor security", "outdoor surveillance"],
+    "indoor":  ["indoor", "indoors", "inside", "internal", "interior", "indoor use", "for indoor", "indoor camera", "indoor security", "indoor surveillance", "home use", "office use", "indoor only", "indoor-only"],
+    
+    # Vandal resistance variants
+    "vandal":  ["vandal", "vandalism", "vandal resistant", "vandal-resistant", "vandal proof", "vandal-proof", "anti-vandal", "antivandal", "ik10", "ik 10", "ik10 rating", "ik 10 rating", "vandal protection", "tamper resistant", "tamper-resistant", "tamper proof", "tamper-proof"],
+    
+    # Audio variants
+    "audio":   ["audio", "microphone", "mic", "microphone", "sound", "audio recording", "audio capture", "built-in mic", "built-in microphone", "integrated mic", "integrated microphone", "two-way audio", "two way audio", "bidirectional audio", "speaker", "speakers", "audio output", "audio input"],
+    
+    # Resolution variants
+    "4k":      ["4k", "4k uhd", "4k ultra hd", "4k ultra hd", "uhd", "ultra hd", "ultra high definition", "4k resolution", "4k video", "4k recording", "4k camera", "4k surveillance", "4k security", "3840x2160", "2160p", "4k@30fps", "4k@60fps"],
+    "1080p":   ["1080p", "1080 p", "full hd", "fhd", "full high definition", "full high definition", "1080p hd", "1080p high definition", "1080p resolution", "1080p video", "1080p recording", "1080p camera", "1080p surveillance", "1080p security", "1920x1080", "1080i", "1080p@30fps", "1080p@60fps"],
+    "720p":    ["720p", "720 p", "hd", "high definition", "720p hd", "720p high definition", "720p resolution", "720p video", "720p recording", "720p camera", "720p surveillance", "720p security", "1280x720", "720i", "720p@30fps", "720p@60fps"],
+    
+    # Camera type variants
+    "dome":    ["dome", "dome camera", "dome security", "dome surveillance", "ceiling dome", "ceiling-mounted dome", "wall dome", "wall-mounted dome", "indoor dome", "outdoor dome", "dome style", "dome-style", "dome shaped", "dome-shaped", "hemispherical", "semi-hemispherical"],
+    "bullet":  ["bullet", "bullet camera", "bullet security", "bullet surveillance", "bullet style", "bullet-style", "cylindrical", "tube camera", "tube style", "tube-style", "outdoor bullet", "indoor bullet", "wall bullet", "ceiling bullet", "bullet shaped", "bullet-shaped"],
+    "ptz":     ["ptz", "p-t-z", "pan tilt zoom", "pan-tilt-zoom", "pan tilt", "pan-tilt", "ptz camera", "ptz security", "ptz surveillance", "motorized", "motorized camera", "remote control", "remote-controlled", "remote controlled", "controllable", "movable", "rotating", "swiveling", "tilting", "panning", "zooming"],
+    "turret":  ["turret", "turret camera", "turret security", "turret surveillance", "turret style", "turret-style", "eyeball", "eyeball camera", "eyeball style", "eyeball-style", "mini dome", "mini-dome", "compact dome", "compact-dome", "small dome", "small-dome"],
+    
+    # Megapixel variants - comprehensive
+    "1mp":     ["1mp", "1MP", "1 megapixel", "1mp resolution", "1 mp", "1 mega pixel", "1 mega-pixel", "1 mega pixel", "1mp camera", "1mp security", "1mp surveillance", "1mp hd", "1mp high definition"],
+    "2mp":     ["2mp", "2MP", "2 megapixel", "2mp resolution", "2 mp", "2 mega pixel", "2 mega-pixel", "2 mega pixel", "2mp camera", "2mp security", "2mp surveillance", "2mp hd", "2mp high definition", "2mp@30fps", "2mp@60fps"],
+    "3mp":     ["3mp", "3MP", "3 megapixel", "3mp resolution", "3 mp", "3 mega pixel", "3 mega-pixel", "3 mega pixel", "3mp camera", "3mp security", "3mp surveillance", "3mp hd", "3mp high definition", "3mp@30fps", "3mp@60fps"],
+    "4mp":     ["4mp", "4MP", "4 megapixel", "4mp resolution", "4 mp", "4 mega pixel", "4 mega-pixel", "4 mega pixel", "4mp camera", "4mp security", "4mp surveillance", "4mp hd", "4mp high definition", "4mp@30fps", "4mp@60fps"],
+    "5mp":     ["5mp", "5MP", "5 megapixel", "5mp resolution", "5 mp", "5 mega pixel", "5 mega-pixel", "5 mega pixel", "5mp camera", "5mp security", "5mp surveillance", "5mp hd", "5mp high definition", "5mp@30fps", "5mp@60fps"],
+    "6mp":     ["6mp", "6MP", "6 megapixel", "6mp resolution", "6 mp", "6 mega pixel", "6 mega-pixel", "6 mega pixel", "6mp camera", "6mp security", "6mp surveillance", "6mp hd", "6mp high definition", "6mp@30fps", "6mp@60fps"],
+    "8mp":     ["8mp", "8MP", "8 megapixel", "8mp resolution", "8 mp", "8 mega pixel", "8 mega-pixel", "8 mega pixel", "8mp camera", "8mp security", "8mp surveillance", "8mp hd", "8mp high definition", "8mp@30fps", "8mp@60fps"],
+    "12mp":    ["12mp", "12MP", "12 megapixel", "12mp resolution", "12 mp", "12 mega pixel", "12 mega-pixel", "12 mega pixel", "12mp camera", "12mp security", "12mp surveillance", "12mp hd", "12mp high definition", "12mp@30fps", "12mp@60fps"],
+    "16mp":    ["16mp", "16MP", "16 megapixel", "16mp resolution", "16 mp", "16 mega pixel", "16 mega-pixel", "16 mega pixel", "16mp camera", "16mp security", "16mp surveillance", "16mp hd", "16mp high definition", "16mp@30fps", "16mp@60fps"],
+    "20mp":    ["20mp", "20MP", "20 megapixel", "20mp resolution", "20 mp", "20 mega pixel", "20 mega-pixel", "20 mega pixel", "20mp camera", "20mp security", "20mp surveillance", "20mp hd", "20mp high definition", "20mp@30fps", "20mp@60fps"],
+    
+    # Additional common search terms
+    "wireless": ["wireless", "wifi", "wi-fi", "wifi camera", "wireless camera", "wifi security", "wireless security", "wifi surveillance", "wireless surveillance", "no cable", "cable free", "cable-free", "wireless network", "wifi network"],
+    "wired":   ["wired", "cable", "cabled", "ethernet", "network cable", "cat5", "cat6", "cat5e", "cat6a", "rj45", "wired network", "cable connection", "ethernet connection"],
+    "color":   ["color", "colour", "color night vision", "colour night vision", "color ir", "colour ir", "color infrared", "colour infrared", "full color", "full colour", "color recording", "colour recording", "color video", "colour video"],
+    "bw":      ["bw", "black white", "black and white", "black & white", "monochrome", "grayscale", "grey scale", "gray scale", "b&w", "black/white", "mono"],
+    "day":     ["day", "daytime", "day time", "day vision", "daylight", "day light", "bright light", "sunlight", "sun light", "day mode", "daytime mode"],
+    "night":   ["night", "nighttime", "night time", "night vision", "night mode", "nighttime mode", "dark", "darkness", "low light", "low-light", "lowlight", "no light", "zero light", "starlight", "star light"],
+    "motion":  ["motion", "motion detection", "motion sensor", "motion sensing", "motion activated", "motion-activated", "motion trigger", "motion triggered", "motion alert", "motion alarm", "movement", "movement detection", "movement sensor", "movement sensing"],
+    "recording": ["recording", "record", "records", "recorded", "video recording", "audio recording", "continuous recording", "24/7 recording", "24 7 recording", "always recording", "constant recording", "permanent recording", "storage", "stored", "saved"],
+    "live":    ["live", "live view", "live viewing", "live feed", "live stream", "live streaming", "real time", "real-time", "realtime", "live monitoring", "live surveillance", "live security", "remote viewing", "remote view", "remote access"],
+    "zoom":    ["zoom", "zooming", "zoomed", "optical zoom", "digital zoom", "zoom lens", "zoom capability", "zoom function", "zoom feature", "magnification", "magnify", "close up", "close-up", "telephoto", "wide angle", "wide-angle", "wideangle"],
+    "lens":    ["lens", "lenses", "focal length", "focal length", "mm lens", "millimeter lens", "fixed lens", "fixed focal", "varifocal", "vari-focal", "auto focus", "autofocus", "auto-focus", "manual focus", "manual-focus"],
+    "mount":   ["mount", "mounting", "mounted", "bracket", "brackets", "mounting bracket", "mounting hardware", "ceiling mount", "wall mount", "pole mount", "corner mount", "universal mount", "adjustable mount", "fixed mount"],
+    "storage": ["storage", "sd card", "sd-card", "micro sd", "micro-sd", "memory card", "local storage", "cloud storage", "nvr", "dvr", "recorder", "recording device", "storage device", "hard drive", "harddisk", "hard disk"],
+    "alarm":   ["alarm", "alerts", "alert", "notification", "notifications", "alarm system", "alert system", "warning", "warnings", "siren", "sirens", "buzzer", "buzzers", "chime", "chimes"],
+    "smart":   ["smart", "intelligent", "ai", "artificial intelligence", "smart detection", "smart analytics", "smart features", "smart camera", "smart security", "smart surveillance", "advanced", "advanced features", "advanced detection"],
+    "budget":  ["budget", "cheap", "inexpensive", "affordable", "low cost", "low-cost", "lowcost", "economical", "value", "value for money", "cost effective", "cost-effective", "costeffective"],
+    "premium": ["premium", "high end", "high-end", "high end", "professional", "pro", "commercial", "enterprise", "business", "industrial", "heavy duty", "heavy-duty", "heavy duty", "rugged", "durable", "reliable"],
+    "compact": ["compact", "small", "mini", "miniature", "tiny", "small form", "small-form", "smallform", "space saving", "space-saving", "spacesaving", "discrete", "discreet", "unobtrusive", "hidden", "concealed"],
+    "visible": ["visible", "obvious", "deterrent", "deterrent camera", "deterrent security", "deterrent surveillance", "warning", "warning camera", "warning security", "warning surveillance", "noticeable", "prominent", "conspicuous"],
 }
 
 WEIGHTS = {
@@ -80,6 +128,7 @@ WEIGHTS = {
     "brand_avoid": -2.0,
     "budget_fit": 1.0,
     "over_budget_penalty": -1e9,
+    "price_penalty": 0.01,  # Penalty per dollar to favor cheaper cameras
 }
 MIN_TOKEN_HITS = 1
 HARD_BUDGET_CAP = True
@@ -134,6 +183,71 @@ class ProductRetrieval:
 
     def __init__(self, conn: asyncpg.Connection):
         self.conn = conn
+    async def _simple_camera_search(self, want: Dict[str, Any], variants: List[str], limit: int = 200) -> List[Dict[str, Any]]:
+        """Simplified camera search for megapixel requirements that works reliably."""
+        where_conditions = ["active = true"]
+        location = (want.get("location") or "").lower()
+        
+        # Extract megapixel tokens
+        mp_tokens = [v for v in variants if any(mp in v.lower() for mp in ['mp', 'megapixel'])]
+        
+        # Require camera keywords
+        where_conditions.append("(LOWER(description) LIKE '%camera%' OR LOWER(description) LIKE '%dome%' OR LOWER(description) LIKE '%bullet%' OR LOWER(description) LIKE '%turret%')")
+        
+        # If outdoor requested, require outdoor indicators
+        if location == "outdoor":
+            where_conditions.append("(LOWER(description) LIKE '%outdoor%' OR LOWER(description) LIKE '%ip66%' OR LOWER(description) LIKE '%ip67%')")
+        
+        # Require megapixel specification
+        if mp_tokens:
+            mp_conditions = []
+            for mp_token in mp_tokens:
+                mp_conditions.append(f"LOWER(description) LIKE '%{mp_token}%'")
+            where_conditions.append("(" + " OR ".join(mp_conditions) + ")")
+        
+        # Exclude obvious accessories
+        where_conditions.append("LOWER(description) NOT LIKE '%mount%'")
+        where_conditions.append("LOWER(description) NOT LIKE '%bracket%'")
+        where_conditions.append("LOWER(description) NOT LIKE '%holder%'")
+        where_conditions.append("LOWER(description) NOT LIKE '%housing%'")
+        
+        sql = f"""
+            SELECT sku, description, price, currency, family, active
+            FROM products
+            WHERE {' AND '.join(where_conditions)}
+            ORDER BY price ASC NULLS LAST, sku ASC
+            LIMIT {int(limit)}
+        """
+        
+        rows = await self.conn.fetch(sql)
+        results = [dict(r) for r in rows]
+        
+        # Apply scoring to prioritize exact matches
+        def score(row: Dict[str, Any]) -> float:
+            d = (row.get("description") or "").lower()
+            price = float(row.get("price") or 0)
+            s = 0.0
+            
+            # Start with a high base score for all valid results
+            s = 100.0
+            
+            # Score based on token matches
+            hits = sum(1 for v in variants if v in d)
+            s += 3.0 * hits
+            
+            # Boost for exact MP matches
+            mp_hits = sum(1 for mp_token in mp_tokens if mp_token in d)
+            s += 10.0 * mp_hits
+            
+            # Very strong price preference (lower is better)
+            # Subtract the actual price to heavily favor cheaper cameras
+            s -= price / 10.0  # Strong penalty for expensive cameras
+            
+            return s
+        
+        scored = sorted(results, key=score, reverse=True)
+        return scored[:10]
+
     async def deterministic_search(self, want: Dict[str, Any], limit: int = 200) -> List[Dict[str, Any]]:
         raw_family = want.get("family")
         fam = _normalize_family(raw_family, want)
@@ -141,6 +255,10 @@ class ProductRetrieval:
 
         tokens = _collect_tokens(want)
         variants = _expand_variants(tokens)
+
+        # For camera searches with megapixel requirements, use a simpler, more reliable approach
+        if fam_l == "camera" and any('mp' in v.lower() for v in variants):
+            return await self._simple_camera_search(want, variants, limit)
 
         must_any = FAMILY_MUST.get(fam_l or "", [])
         bans = FAMILY_BAN.get(fam_l or "", [])
@@ -165,7 +283,8 @@ class ProductRetrieval:
             # CRITICAL: Must be an actual camera, not an accessory
             # Look for camera specifications that indicate actual cameras
             camera_spec_patterns = [
-                "mp @", "megapixel", "fps", "degree", "mm fixed focal", "ir distance", "fov", "day & night", "ip67", "ik10"
+                "mp @", "mp resolution", "megapixel", "fps", "degree", "mm fixed focal", "ir distance", "fov", "day & night", "ip67", "ik10",
+                "mp at", "mp with", "mp and", "mp for", "mp camera", "mp dome", "mp bullet", "mp turret"
             ]
             camera_spec_sql = []
             for pattern in camera_spec_patterns:
@@ -182,7 +301,7 @@ class ProductRetrieval:
                 p += 1
                 params.append(f"%{pattern}%")
                 # Exclude common accessory keywords
-                camera_spec_sql.append(f"(LOWER(description) LIKE ${p} AND LOWER(description) NOT LIKE '%for %' AND LOWER(description) NOT LIKE '%compatible with%' AND LOWER(description) NOT LIKE '%accessory%' AND LOWER(description) NOT LIKE '%mount%' AND LOWER(description) NOT LIKE '%bracket%' AND LOWER(description) NOT LIKE '%housing%' AND LOWER(description) NOT LIKE '%cover%' AND LOWER(description) NOT LIKE '%sunshade%' AND LOWER(description) NOT LIKE '%back box%' AND LOWER(description) NOT LIKE '%wiper%' AND LOWER(description) NOT LIKE '%replacement%' AND LOWER(description) NOT LIKE '%license%' AND LOWER(description) NOT LIKE '%software%' AND LOWER(description) NOT LIKE '%sticker%' AND LOWER(description) NOT LIKE '%support%' AND LOWER(description) NOT LIKE '%holder%' AND LOWER(description) NOT LIKE '%charging%' AND LOWER(description) NOT LIKE '%docking%' AND LOWER(description) NOT LIKE '%heater%' AND LOWER(description) NOT LIKE '%power supply%')")
+                camera_spec_sql.append(f"LOWER(description) LIKE ${p}")
             
             if camera_spec_sql:
                 desc_constraints.append("(" + " OR ".join(camera_spec_sql) + ")")
@@ -298,6 +417,7 @@ class ProductRetrieval:
         query = [f"SELECT sku, description, price, currency, family, active FROM products WHERE {' AND '.join(where)}"]
         if like_or:
             query.append("AND (" + " OR ".join(like_or) + ")")
+        
         query.append("ORDER BY price ASC NULLS LAST, sku ASC")
         query.append(f"LIMIT {int(limit)}")
         sql = " ".join(query)
@@ -321,6 +441,24 @@ class ProductRetrieval:
             s += WEIGHTS["brand_avoid"] * sum(1 for b in avoid if b in d)
             if "amount" in budget and budget["amount"] is not None and price <= float(budget["amount"]):
                 s += WEIGHTS["budget_fit"]
+            
+            # Boost score for megapixel matches
+            mp_tokens = [v for v in variants if any(mp in v.lower() for mp in ['mp', 'megapixel'])]
+            if mp_tokens and fam_l == "camera":
+                mp_hits = sum(1 for mp_token in mp_tokens if mp_token in d)
+                if mp_hits > 0:
+                    s += 10.0 * mp_hits  # High boost for exact MP matches
+            
+            # Apply price penalty to favor cheaper cameras for vague requests
+            # Only apply if this is a vague camera request (no specific features)
+            is_vague_camera = (fam_l == "camera" and 
+                             not want.get("features") and 
+                             not want.get("formFactor") and
+                             not any(mp in v.lower() for v in variants for mp in ['mp', 'megapixel']))
+            
+            if is_vague_camera:
+                s -= WEIGHTS["price_penalty"] * price  # Penalty increases with price
+            
             return s
 
         scored = sorted(results, key=score, reverse=True)
@@ -462,8 +600,8 @@ class ProductRetrieval:
         # Check if we have enough specific criteria to warrant a search
         has_specific_criteria = False
         
-        # Always allow search for NVR/server family (they are valid products even without specific features)
-        if fam == "nvr":
+        # Always allow search for NVR/server and switch families (they are valid products even without specific features)
+        if fam in ["nvr", "switch"]:
             has_specific_criteria = True
         
         # Check for specific features that would indicate a real search

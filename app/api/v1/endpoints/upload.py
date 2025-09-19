@@ -575,7 +575,7 @@ async def process_upload_file_async(upload_id: str, file_path: str, brand_id: Op
                     SET status = 'failed', message = $1, processed_at = NOW() 
                     WHERE id = $2
                 """, f"Processing failed: {str(e)}", upload_id)
-            await error_db.close()
+            await error_db.disconnect()
         except Exception as error_e:
             print(f"Failed to update error status for {upload_id}: {str(error_e)}")
     
@@ -583,7 +583,7 @@ async def process_upload_file_async(upload_id: str, file_path: str, brand_id: Op
         # Ensure database connection is closed
         try:
             if db and db._pool:
-                await db.close()
+                await db.disconnect()
         except:
             pass
 
