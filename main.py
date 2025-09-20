@@ -25,8 +25,13 @@ app.add_middleware(
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Include API routes
+# Include API routes BEFORE static file mounting
 app.include_router(api_router, prefix="/api/v1")
+
+# Mount the built React app for production (AFTER API routes)
+import os
+if os.path.exists("frontend/dist"):
+    app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="frontend")
 
 db = Database()
 
@@ -74,6 +79,6 @@ async def index(request: Request) -> HTMLResponse:
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=5000, reload=True)
 
 

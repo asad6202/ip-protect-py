@@ -8,7 +8,7 @@ export function useListUploads(brandId?: string) {
     queryKey: ['uploads', brandId],
     queryFn: async (): Promise<ProductUpload[]> => {
       const params = brandId ? `?brand_id=${brandId}` : ''
-      const response = await api.get(`/api/v1/uploads${params}`)
+      const response = await api.get(`/v1/uploads${params}`)
       return response.data
     },
   })
@@ -19,7 +19,7 @@ export function useGetUpload(id: string) {
   return useQuery({
     queryKey: ['uploads', id],
     queryFn: async (): Promise<ProductUpload> => {
-      const response = await api.get(`/api/v1/uploads/${id}`)
+      const response = await api.get(`/v1/uploads/${id}`)
       return response.data
     },
     enabled: !!id,
@@ -32,7 +32,7 @@ export function useUploadFile() {
   
   return useMutation({
     mutationFn: async (formData: FormData): Promise<ProductUpload> => {
-      const response = await api.post('/api/v1/uploads', formData, {
+      const response = await api.post('/v1/uploads', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -50,7 +50,7 @@ export function useUploadProgress(uploadId: string, enabled: boolean = true) {
   return useQuery({
     queryKey: ['upload-progress', uploadId],
     queryFn: async () => {
-      const response = await api.get(`/api/v1/uploads/${uploadId}/progress`)
+      const response = await api.get(`/v1/uploads/${uploadId}/progress`)
       return response.data
     },
     enabled: enabled && !!uploadId,
@@ -70,7 +70,7 @@ export function useDeleteUpload() {
   
   return useMutation({
     mutationFn: async (id: string): Promise<void> => {
-      await api.delete(`/api/v1/uploads/${id}`)
+      await api.delete(`/v1/uploads/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['uploads'] })

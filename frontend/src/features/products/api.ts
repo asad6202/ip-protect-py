@@ -16,7 +16,7 @@ export function useListProducts(filters: ProductFilters = {}) {
       if (filters.page) params.append('page', filters.page.toString())
       if (filters.page_size) params.append('page_size', filters.page_size.toString())
 
-      const response = await api.get(`/api/v1/products?${params.toString()}`)
+      const response = await api.get(`/v1/products?${params.toString()}`)
       return response.data
     },
   })
@@ -27,7 +27,7 @@ export function useGetProduct(id: string) {
   return useQuery({
     queryKey: ['products', id],
     queryFn: async (): Promise<Product> => {
-      const response = await api.get(`/api/v1/products/${id}`)
+      const response = await api.get(`/v1/products/${id}`)
       return response.data
     },
     enabled: !!id,
@@ -39,7 +39,7 @@ export function useProductFamilies() {
   return useQuery({
     queryKey: ['product-families'],
     queryFn: async (): Promise<string[]> => {
-      const response = await api.get('/api/v1/products/families')
+      const response = await api.get('/v1/products/families')
       return response.data
     },
   })

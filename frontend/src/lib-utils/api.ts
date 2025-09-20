@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 // In Replit environment, use the window location origin to automatically detect the correct URL
-const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8000')
+const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || (typeof window !== 'undefined' ? `${window.location.origin}/api` : 'http://localhost:8000/api')
 
 export const api = axios.create({
   baseURL: API_BASE_URL,

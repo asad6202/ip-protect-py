@@ -32,7 +32,7 @@ export function useDashboardStats() {
   return useQuery({
     queryKey: ['dashboard', 'stats'],
     queryFn: async (): Promise<DashboardStats> => {
-      const response = await api.get('/api/v1/dashboard/stats')
+      const response = await api.get('/v1/dashboard/stats')
       return response.data
     },
     refetchOnMount: true,
@@ -46,7 +46,7 @@ export function useRecentQuotes(limit: number = 5) {
   return useQuery({
     queryKey: ['dashboard', 'recent-quotes', limit],
     queryFn: async (): Promise<RecentQuote[]> => {
-      const response = await api.get(`/api/v1/dashboard/recent-quotes?limit=${limit}`)
+      const response = await api.get(`/v1/dashboard/recent-quotes?limit=${limit}`)
       return response.data
     },
     refetchOnMount: true,
@@ -60,7 +60,7 @@ export function useRecentUploads(limit: number = 5) {
   return useQuery({
     queryKey: ['dashboard', 'recent-uploads', limit],
     queryFn: async (): Promise<RecentUpload[]> => {
-      const response = await api.get(`/api/v1/dashboard/recent-uploads?limit=${limit}`)
+      const response = await api.get(`/v1/dashboard/recent-uploads?limit=${limit}`)
       return response.data
     },
     refetchOnMount: true,

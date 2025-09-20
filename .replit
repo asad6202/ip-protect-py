@@ -21,7 +21,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "bash -c \"cd frontend && npm install && npm run dev & python main.py\""
+args = "python main.py"
 waitForPort = 5000
 
 [workflows.workflow.metadata]
@@ -31,9 +31,10 @@ outputType = "webview"
 localPort = 5000
 externalPort = 80
 
-[[ports]]
-localPort = 8000
-externalPort = 8000
-
 [nix]
 channel = "stable-25_05"
+
+[deployment]
+deploymentTarget = "autoscale"
+run = ["python", "main.py"]
+build = ["sh", "-c", "(cd frontend && npm install && npm run build)"]

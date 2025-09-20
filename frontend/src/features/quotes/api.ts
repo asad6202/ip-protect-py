@@ -6,7 +6,7 @@ import { Quote, CreateQuoteRequest, UpdateQuoteRequest, QuoteGenResponse, Pagina
 export function useGenerateQuote() {
   return useMutation({
     mutationFn: async (prompt: string): Promise<QuoteGenResponse> => {
-      const response = await api.post('/api/v1/quote/generate', { prompt })
+      const response = await api.post('/v1/quote/generate', { prompt })
       return response.data
     },
   })
@@ -17,7 +17,7 @@ export function useListQuotes() {
   return useQuery({
     queryKey: ['quotes'],
     queryFn: async (): Promise<PaginatedResponse<Quote>> => {
-      const response = await api.get('/api/v1/quotes')
+      const response = await api.get('/v1/quotes')
       return response.data
     },
     refetchOnMount: true,
@@ -31,7 +31,7 @@ export function useGetQuote(id: string) {
   return useQuery({
     queryKey: ['quotes', id],
     queryFn: async (): Promise<Quote> => {
-      const response = await api.get(`/api/v1/quote/${id}`)
+      const response = await api.get(`/v1/quote/${id}`)
       return response.data
     },
     enabled: !!id,
@@ -44,7 +44,7 @@ export function useCreateQuote() {
   
   return useMutation({
     mutationFn: async (data: CreateQuoteRequest): Promise<Quote> => {
-      const response = await api.post('/api/v1/quote', data)
+      const response = await api.post('/v1/quote', data)
       return response.data
     },
     onSuccess: (newQuote) => {
@@ -66,7 +66,7 @@ export function useUpdateQuote() {
   
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: UpdateQuoteRequest }): Promise<Quote> => {
-      const response = await api.patch(`/api/v1/quote/${id}`, data)
+      const response = await api.patch(`/v1/quote/${id}`, data)
       return response.data
     },
     onSuccess: (_, { id }) => {
@@ -82,7 +82,7 @@ export function useDeleteQuote() {
   
   return useMutation({
     mutationFn: async (id: string): Promise<void> => {
-      await api.delete(`/api/v1/quote/${id}`)
+      await api.delete(`/v1/quote/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quotes'] })
