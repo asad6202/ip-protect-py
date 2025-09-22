@@ -28,7 +28,8 @@ FAMILY_MUST = {
     "camera": [
         "network camera", "ip camera", "cctv camera", "surveillance camera",
         "dome camera", "bullet camera", "ptz camera", "turret camera",
-        "outdoor camera", "indoor camera", "day/night camera", "day night camera"
+        "outdoor camera", "indoor camera", "day/night camera", "day night camera",
+        "thermal camera", "thermal network camera", "fixed dome camera", "advanced dome camera"
     ],
     "nvr":    ["nvr", "recorder", "network video recorder", "digital video recorder", "server", "video server"],
     "switch": ["switch", "network switch", "poe switch", "ethernet switch"],
@@ -36,12 +37,13 @@ FAMILY_MUST = {
 # Stronger bans to keep out accessories/licenses/mounts/etc.
 FAMILY_BAN = {
     "camera": [
-        "adapter", "charger", "license", "software", "relay", "tamper", "battery", "power supply",
-        "mount", "bracket", "housing", "cover", "smoked dome", "cap", "weather cap",
+        "adapter", "charger", "license", "software", "relay", "battery", "power supply",
+        "housing", "cover", "smoked dome", "cap", "weather cap",
         "sunshade", "sun shade", "sunshield", "shroud", "skin", "bubble", "clear dome",
-        "stand", "joystick", "microphone", "mic", "speaker", "encoder", "decoder",
-        "appliance", "kit", "recessed", "dome cover", "rack", "rack mount", "mount kit",
-        "cable", "cables", "connector", "connectors", "wire", "wires", "cord", "cords"
+        "stand", "joystick", "encoder", "decoder",
+        "appliance", "kit", "recessed", "dome cover", "rack mount", "mount kit",
+        "cable", "cables", "connector", "connectors", "wire", "wires", "cord", "cords",
+        "spare part", "spare", "replacement", "accessory", "accessories"
     ],
     "nvr": [
         "adapter", "charger", "license", "software", "tamper", "battery",
@@ -259,6 +261,10 @@ class ProductRetrieval:
         # For camera searches with megapixel requirements, use a simpler, more reliable approach
         if fam_l == "camera" and any('mp' in v.lower() for v in variants):
             return await self._simple_camera_search(want, variants, limit)
+        
+        # For all camera searches, use the simplified approach to avoid SQL complexity issues
+        if fam_l == "camera":
+            return await self._simple_camera_search_with_brand(want, variants, limit)
 
         must_any = FAMILY_MUST.get(fam_l or "", [])
         bans = FAMILY_BAN.get(fam_l or "", [])
@@ -266,6 +272,16 @@ class ProductRetrieval:
         where: List[str] = ["active = true"]
         params: List[Any] = []
         p = 0
+        
+        # Add family filter to ensure we get the right product type
+        # For cameras, be more flexible since actual cameras might be in other families
+        if fam_l == "camera":
+            # For cameras, look in multiple families that might contain actual cameras
+            where.append("(LOWER(family) = 'cameras' OR LOWER(family) = 'audio and power accessories' OR LOWER(family) = 'recorder accessories' OR LOWER(family) = 'power supply' OR LOWER(family) = 'software and licensing')")
+        elif fam_l:
+            p += 1
+            params.append(fam_l)
+            where.append(f"LOWER(family) = ${p}")
 
         # ---- MUST: at least one required family token ----
         if must_any:
@@ -472,6 +488,144 @@ class ProductRetrieval:
                 filtered.append(r)
 
         return filtered[:10] if filtered else scored[:5]
+
+    async def _simple_camera_search_with_brand(self, want: Dict[str, Any], variants: List[str], limit: int) -> List[Dict[str, Any]]:
+        """
+        Simplified camera search that works around SQL complexity issues.
+        """
+        # Get brand preferences
+        pref, avoid = _brand_lists(want)
+        
+        # Build a simple SQL query that looks for actual cameras
+        sql = """
+            SELECT sku, description, price, currency, family, active
+            FROM products
+            WHERE active = true
+            AND (LOWER(family) = 'cameras' OR LOWER(family) = 'audio and power accessories' OR LOWER(family) = 'recorder accessories' OR LOWER(family) = 'power supply' OR LOWER(family) = 'software and licensing')
+            AND (LOWER(description) LIKE 'network camera%' OR LOWER(description) LIKE 'ip camera%' OR LOWER(description) LIKE 'cctv camera%' OR LOWER(description) LIKE 'surveillance camera%' OR LOWER(description) LIKE 'dome camera%' OR LOWER(description) LIKE 'bullet camera%' OR LOWER(description) LIKE 'ptz camera%' OR LOWER(description) LIKE 'turret camera%' OR LOWER(description) LIKE 'outdoor camera%' OR LOWER(description) LIKE 'indoor camera%' OR LOWER(description) LIKE 'thermal camera%' OR LOWER(description) LIKE 'advanced dome camera%')
+            ORDER BY price ASC NULLS LAST, sku ASC
+            LIMIT 50
+        """
+        
+        rows = await self.conn.fetch(sql)
+        results = [dict(row) for row in rows]
+        
+        # Filter by brand preferences
+        if pref:
+            results = [r for r in results if any(brand in (r.get("description") or "").lower() for brand in pref)]
+        
+        if avoid:
+            results = [r for r in results if not any(brand in (r.get("description") or "").lower() for brand in avoid)]
+        
+        # Filter out accessories - exclude items that are clearly accessories
+        accessory_keywords = [
+            'mount', 'bracket', 'housing', 'cover', 'adapter', 'charger', 'license', 'software',
+            'relay', 'battery', 'power supply', 'cable', 'connector', 'wire', 'cord',
+            'spare part', 'spare', 'replacement', 'accessory', 'accessories', 'kit',
+            'wiper', 'casing', 'holder', 'plate', 'bracket', 'stand', 'joystick',
+            'microphone', 'speaker', 'encoder', 'decoder', 'appliance', 'recessed',
+            'dome cover', 'rack mount', 'mount kit', 'sunshade', 'sun shield',
+            'sunshield', 'shroud', 'skin', 'bubble', 'clear dome', 'cap', 'weather cap'
+        ]
+        
+        # Only exclude if the description is primarily about accessories
+        filtered_results = []
+        for r in results:
+            desc = (r.get("description") or "").lower()
+            
+            # Check if this is clearly a camera (must be a camera, not an accessory for cameras)
+            is_camera = any(desc.startswith(camera_term) for camera_term in [
+                'network camera', 'ip camera', 'cctv camera', 'surveillance camera',
+                'dome camera', 'bullet camera', 'ptz camera', 'turret camera',
+                'outdoor camera', 'indoor camera', 'thermal camera', 'advanced dome camera'
+            ])
+            
+            # Check if this is primarily an accessory (starts with accessory terms)
+            is_accessory = any(desc.startswith(accessory_term) for accessory_term in [
+                'mount', 'bracket', 'housing', 'cover', 'adapter', 'charger', 'license', 'software',
+                'relay', 'battery', 'power supply', 'cable', 'connector', 'wire', 'cord',
+                'spare part', 'spare', 'replacement', 'accessory', 'accessories', 'kit',
+                'wiper', 'casing', 'holder', 'plate', 'stand', 'joystick',
+                'microphone', 'speaker', 'encoder', 'decoder', 'appliance', 'recessed',
+                'dome cover', 'rack mount', 'mount kit', 'sunshade', 'sun shield',
+                'sunshield', 'shroud', 'skin', 'bubble', 'clear dome', 'cap', 'weather cap'
+            ])
+            
+            # Only include if it's clearly a camera and not an accessory
+            if is_camera and not is_accessory:
+                filtered_results.append(r)
+        
+        results = filtered_results
+        
+        # Score and filter by token matches
+        def score(row: Dict[str, Any]) -> float:
+            d = (row.get("description") or "").lower()
+            price = float(row.get("price") or 0)
+            hits = sum(1 for v in variants if v in d)
+            s = 0.0
+            s += WEIGHTS["token_hit"] * hits
+            s += WEIGHTS["brand_pref"] * sum(1 for b in pref if b in d)
+            s += WEIGHTS["brand_avoid"] * sum(1 for b in avoid if b in d)
+            
+            # Apply price penalty to favor cheaper cameras for vague requests
+            is_vague_camera = (not want.get("features") and 
+                             not want.get("formFactor") and
+                             not any(mp in v.lower() for v in variants for mp in ['mp', 'megapixel']))
+            
+            if is_vague_camera:
+                s -= WEIGHTS["price_penalty"] * price
+            
+            return s
+        
+        scored = sorted(results, key=score, reverse=True)
+        
+        # Filter by minimum token hits and enforce specific feature requirements
+        filtered = []
+        for r in scored:
+            d = (r.get("description") or "").lower()
+            hits = sum(1 for v in variants if v in d)
+            
+            # Check if camera meets minimum token requirements
+            if hits < MIN_TOKEN_HITS:
+                continue
+            
+            # Enforce specific feature requirements
+            meets_requirements = True
+            
+            # Check for PoE requirement
+            if 'poe' in [f.lower() for f in want.get('features', [])]:
+                has_poe = any(poe_term in d for poe_term in ['poe', 'poe+', 'power over ethernet', '802.3af', '802.3at'])
+                if not has_poe:
+                    meets_requirements = False
+            
+            # Check for IR 30m requirement
+            if 'ir-30m' in [f.lower() for f in want.get('features', [])]:
+                has_ir_30m = any(ir_term in d for ir_term in ['ir 30m', 'ir-30m', 'infrared 30m', '30m ir', 'ir range 30m', '30 meter ir'])
+                if not has_ir_30m:
+                    meets_requirements = False
+            
+            # Check for IR illumination requirement
+            if 'ir-illumination' in [f.lower() for f in want.get('features', [])]:
+                has_ir_illumination = any(ir_term in d for ir_term in ['ir illumination', 'ir-illumination', 'infrared illumination', 'night vision', 'night-vision', 'ir led', 'ir lighting'])
+                if not has_ir_illumination:
+                    meets_requirements = False
+            
+            # Check for outdoor requirement
+            if want.get('location') == 'outdoor':
+                has_outdoor = any(outdoor_term in d for outdoor_term in ['outdoor', 'ip66', 'ip67', 'weatherproof', 'weather resistant'])
+                if not has_outdoor:
+                    meets_requirements = False
+            
+            # Check for dome requirement
+            if want.get('formFactor') == 'dome':
+                has_dome = any(dome_term in d for dome_term in ['dome camera', 'dome'])
+                if not has_dome:
+                    meets_requirements = False
+            
+            if meets_requirements:
+                filtered.append(r)
+        
+        return filtered[:limit]
 
     async def vector_fallback(self, want: Dict[str, Any], prompt: str, limit: int = 50) -> List[Dict[str, Any]]:
         """
