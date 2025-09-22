@@ -1,7 +1,5 @@
 import uvicorn
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
+from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -22,16 +20,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-templates = Jinja2Templates(directory="templates")
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
 # Include API routes BEFORE static file mounting
 app.include_router(api_router, prefix="/api/v1")
 
 # Mount the built React app for production (AFTER API routes)
 import os
-if os.path.exists("frontend/dist"):
+import sys
+
+# Check if we're in production mode
+is_production = os.getenv("ENVIRONMENT", "development").lower() == "production"
+
+# Only serve the frontend dist files in production mode
+if is_production and os.path.exists("frontend/dist"):
     app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="frontend")
+    print("🚀 Production mode: Serving frontend from dist/")
+else:
+    print("🔧 Development mode: Frontend served separately (not from dist/)")
 
 db = Database()
 
@@ -65,18 +69,6 @@ async def query_endpoint(payload: QueryRequest) -> QueryResponse:
         raise HTTPException(status_code=500, detail=f"Database error: {exc}")
 
     return QueryResponse(results=results, sql=sql)
-
-
-@app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
-async def index(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse(
-        "index.html",
-        {
-            "request": request,
-            "title": "NL2SQL Demo",
-        },
-    )
-
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=5000, reload=True)
