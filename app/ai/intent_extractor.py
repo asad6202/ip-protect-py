@@ -63,6 +63,7 @@ TOKEN_VARIANTS: Dict[str, List[str]] = {
     "poe+": ["poe+", "802.3at"],
     "ir-30m": ["ir 30m", "ir-30m", "infrared 30m", "infrared 30 m", "exir 30m"],
     "ir-60m": ["ir 60m", "ir-60m", "infrared 60m", "infrared 60 m", "exir 60m"],
+    "ir-illumination": ["ir illumination", "ir-illumination", "infrared illumination", "night vision", "night-vision", "ir led", "ir lighting"],
     "outdoor": ["outdoor", "ip66", "ip67", "weatherproof"],
     "indoor": ["indoor"],
     "vandal": ["vandal", "ik10"],
