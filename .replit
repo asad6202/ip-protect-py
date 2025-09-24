@@ -28,16 +28,8 @@ args = "bash -c \"python main.py & cd frontend && npm install && npm run dev\""
 waitForPort = 5000
 
 [[ports]]
-localPort = 4000
-externalPort = 3000
-
-[[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 8001
-externalPort = 3002
 
 [nix]
 channel = "stable-25_05"
@@ -46,4 +38,8 @@ packages = ["glibcLocales", "libxcrypt", "postgresql"]
 [deployment]
 deploymentTarget = "autoscale"
 run = ["python", "main.py"]
-build = ["bash", "-c", "cd /home/runner/workspace && pip install -r requirements.txt && alembic upgrade head && cd frontend && npm install && npm run build"]
+build = [
+  "bash",
+  "-c",
+  "cd /home/runner/workspace && pip install -r requirements.txt && alembic upgrade head && cd frontend && npm install && npm run build",
+]
