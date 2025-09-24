@@ -57,7 +57,7 @@ class QuoteItem(Base):
     unit_price: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
     currency: Mapped[str] = mapped_column(Text, nullable=False)
     subtotal: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
-    metadata: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    item_metadata: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     position: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=text("now()")

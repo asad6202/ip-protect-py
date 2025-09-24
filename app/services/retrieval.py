@@ -212,10 +212,11 @@ class ProductRetrieval:
         where_conditions.append("LOWER(description) NOT LIKE '%housing%'")
         
         sql = f"""
-            SELECT sku, description, price, currency, family, active
-            FROM products
+            SELECT p.sku, p.description, p.price, p.currency, p.family, p.active, b.name as brand
+            FROM products p
+            LEFT JOIN brands b ON p.brand_id = b.id
             WHERE {' AND '.join(where_conditions)}
-            ORDER BY price ASC NULLS LAST, sku ASC
+            ORDER BY p.price ASC NULLS LAST, p.sku ASC
             LIMIT {int(limit)}
         """
         
@@ -414,11 +415,11 @@ class ProductRetrieval:
             params.append(f"%{v}%")
             like_or.append(f"LOWER(description) LIKE ${p}")
 
-        query = [f"SELECT sku, description, price, currency, family, active FROM products WHERE {' AND '.join(where)}"]
+        query = [f"SELECT p.sku, p.description, p.price, p.currency, p.family, p.active, b.name as brand FROM products p LEFT JOIN brands b ON p.brand_id = b.id WHERE {' AND '.join(where)}"]
         if like_or:
             query.append("AND (" + " OR ".join(like_or) + ")")
         
-        query.append("ORDER BY price ASC NULLS LAST, sku ASC")
+        query.append("ORDER BY p.price ASC NULLS LAST, p.sku ASC")
         query.append(f"LIMIT {int(limit)}")
         sql = " ".join(query)
 
@@ -535,9 +536,10 @@ class ProductRetrieval:
         if sku:
             # Try exact SKU match first
             sql = """
-                SELECT sku, description, price, currency, family, active
-                FROM products
-                WHERE active = true AND sku = $1
+                SELECT p.sku, p.description, p.price, p.currency, p.family, p.active, b.name as brand
+                FROM products p
+                LEFT JOIN brands b ON p.brand_id = b.id
+                WHERE p.active = true AND p.sku = $1
                 LIMIT 1
             """
             rows = await self.conn.fetch(sql, sku)
@@ -546,9 +548,10 @@ class ProductRetrieval:
             
             # Try partial SKU match (SKU contains the search term)
             sql = """
-                SELECT sku, description, price, currency, family, active
-                FROM products
-                WHERE active = true AND sku LIKE $1
+                SELECT p.sku, p.description, p.price, p.currency, p.family, p.active, b.name as brand
+                FROM products p
+                LEFT JOIN brands b ON p.brand_id = b.id
+                WHERE p.active = true AND p.sku LIKE $1
                 LIMIT 1
             """
             rows = await self.conn.fetch(sql, f"%{sku}%")
@@ -557,16 +560,17 @@ class ProductRetrieval:
             
             # Try description match (SKU mentioned in description)
             sql = """
-                SELECT sku, description, price, currency, family, active
-                FROM products
-                WHERE active = true AND LOWER(description) LIKE LOWER($1)
+                SELECT p.sku, p.description, p.price, p.currency, p.family, p.active, b.name as brand
+                FROM products p
+                LEFT JOIN brands b ON p.brand_id = b.id
+                WHERE p.active = true AND LOWER(p.description) LIKE LOWER($1)
                 ORDER BY 
                     CASE 
-                        WHEN LOWER(description) LIKE LOWER($1 || '%') THEN 1
-                        WHEN LOWER(description) LIKE LOWER('%' || $1 || '%') THEN 2
+                        WHEN LOWER(p.description) LIKE LOWER($1 || '%') THEN 1
+                        WHEN LOWER(p.description) LIKE LOWER('%' || $1 || '%') THEN 2
                         ELSE 3
                     END,
-                    sku ASC
+                    p.sku ASC
                 LIMIT 1
             """
             rows = await self.conn.fetch(sql, f"%{sku}%")
@@ -653,6 +657,27 @@ class ProductRetrieval:
             r['_used_any_fallback'] = False
 
         return results
+
+    async def search_products_by_sku(self, sku: str) -> List[Dict[str, Any]]:
+        """
+        Search for products by exact SKU match.
+        Used for feedback-based product replacement.
+        """
+        if not sku:
+            return []
+        
+        sql = """
+            SELECT p.sku, p.description, p.price, p.currency, p.family, p.active, b.name as brand
+            FROM products p
+            LEFT JOIN brands b ON p.brand_id = b.id
+            WHERE p.sku = $1 AND p.active = true
+            LIMIT 1
+        """
+        
+        row = await self.conn.fetchrow(sql, sku)
+        if row:
+            return [dict(row)]
+        return []
 
 # -------------------- Optional sync helpers (if you still use them) --------------------
 

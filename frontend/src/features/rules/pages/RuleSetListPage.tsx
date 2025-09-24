@@ -29,88 +29,181 @@ export default function RuleSetListPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <PageHeader 
-          title="Rule Sets" 
-          description="Manage quote generation rules"
-          children={
-            <Button onClick={() => setShowForm(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Rule Set
-            </Button>
-          }
-        />
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[...Array(6)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader>
-                <div className="h-4 bg-muted rounded w-3/4"></div>
-                <div className="h-3 bg-muted rounded w-1/2"></div>
-              </CardHeader>
-            </Card>
-          ))}
+      <>
+        <div className="space-y-6">
+          <PageHeader 
+            title="Rule Sets" 
+            description="Manage quote generation rules"
+            children={
+              <Button onClick={() => setShowForm(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                New Rule Set
+              </Button>
+            }
+          />
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {[...Array(6)].map((_, i) => (
+              <Card key={i} className="animate-pulse">
+                <CardHeader>
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
+                  <div className="h-3 bg-muted rounded w-1/2"></div>
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
         </div>
-      </div>
+
+        {/* Forms and Dialogs */}
+        <RuleSetForm
+          open={showForm}
+          onOpenChange={setShowForm}
+          onSuccess={() => setShowForm(false)}
+        />
+
+        <RuleSetForm
+          open={!!editingRuleSet}
+          onOpenChange={(open) => !open && setEditingRuleSet(null)}
+          ruleSet={editingRuleSet}
+          onSuccess={() => setEditingRuleSet(null)}
+        />
+
+        <ConfirmDialog
+          open={!!deleteConfirm}
+          onOpenChange={(open) => !open && setDeleteConfirm(null)}
+          title="Delete Rule Set"
+          description="Are you sure you want to delete this rule set? This action cannot be undone and will affect all associated rules."
+          confirmText="Delete"
+          variant="destructive"
+          onConfirm={() => {
+            if (deleteConfirm) {
+              handleDelete(deleteConfirm)
+              setDeleteConfirm(null)
+            }
+          }}
+        />
+      </>
     )
   }
 
   if (error) {
     return (
-      <div className="space-y-6">
-        <PageHeader 
-          title="Rule Sets" 
-          description="Manage quote generation rules"
-          children={
-            <Button onClick={() => setShowForm(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Rule Set
-            </Button>
-          }
+      <>
+        <div className="space-y-6">
+          <PageHeader 
+            title="Rule Sets" 
+            description="Manage quote generation rules"
+            children={
+              <Button onClick={() => setShowForm(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                New Rule Set
+              </Button>
+            }
+          />
+          <Card>
+            <CardContent className="py-12">
+              <EmptyState
+                icon={<Settings className="h-12 w-12" />}
+                title="Error loading rule sets"
+                description="There was an error loading the rule sets. Please try again."
+                action={{
+                  label: 'Retry',
+                  onClick: () => window.location.reload()
+                }}
+              />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Forms and Dialogs */}
+        <RuleSetForm
+          open={showForm}
+          onOpenChange={setShowForm}
+          onSuccess={() => setShowForm(false)}
         />
-        <Card>
-          <CardContent className="py-12">
-            <EmptyState
-              icon={<Settings className="h-12 w-12" />}
-              title="Error loading rule sets"
-              description="There was an error loading the rule sets. Please try again."
-              action={{
-                label: 'Retry',
-                onClick: () => window.location.reload()
-              }}
-            />
-          </CardContent>
-        </Card>
-      </div>
+
+        <RuleSetForm
+          open={!!editingRuleSet}
+          onOpenChange={(open) => !open && setEditingRuleSet(null)}
+          ruleSet={editingRuleSet}
+          onSuccess={() => setEditingRuleSet(null)}
+        />
+
+        <ConfirmDialog
+          open={!!deleteConfirm}
+          onOpenChange={(open) => !open && setDeleteConfirm(null)}
+          title="Delete Rule Set"
+          description="Are you sure you want to delete this rule set? This action cannot be undone and will affect all associated rules."
+          confirmText="Delete"
+          variant="destructive"
+          onConfirm={() => {
+            if (deleteConfirm) {
+              handleDelete(deleteConfirm)
+              setDeleteConfirm(null)
+            }
+          }}
+        />
+      </>
     )
   }
 
   if (!ruleSets || ruleSets.length === 0) {
     return (
-      <div className="space-y-6">
-        <PageHeader 
-          title="Rule Sets" 
-          description="Manage quote generation rules"
-          children={
-            <Button onClick={() => setShowForm(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Rule Set
-            </Button>
-          }
+      <>
+        <div className="space-y-6">
+          <PageHeader 
+            title="Rule Sets" 
+            description="Manage quote generation rules"
+            children={
+              <Button onClick={() => setShowForm(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                New Rule Set
+              </Button>
+            }
+          />
+          <Card>
+            <CardContent className="py-12">
+              <EmptyState
+                icon={<Settings className="h-12 w-12" />}
+                title="No rule sets yet"
+                description="Create your first rule set to customize quote generation."
+                action={{
+                  label: 'Create Rule Set',
+                  onClick: () => setShowForm(true)
+                }}
+              />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Forms and Dialogs */}
+        <RuleSetForm
+          open={showForm}
+          onOpenChange={setShowForm}
+          onSuccess={() => setShowForm(false)}
         />
-        <Card>
-          <CardContent className="py-12">
-            <EmptyState
-              icon={<Settings className="h-12 w-12" />}
-              title="No rule sets yet"
-              description="Create your first rule set to customize quote generation."
-              action={{
-                label: 'Create Rule Set',
-                onClick: () => setShowForm(true)
-              }}
-            />
-          </CardContent>
-        </Card>
-      </div>
+
+        <RuleSetForm
+          open={!!editingRuleSet}
+          onOpenChange={(open) => !open && setEditingRuleSet(null)}
+          ruleSet={editingRuleSet}
+          onSuccess={() => setEditingRuleSet(null)}
+        />
+
+        <ConfirmDialog
+          open={!!deleteConfirm}
+          onOpenChange={(open) => !open && setDeleteConfirm(null)}
+          title="Delete Rule Set"
+          description="Are you sure you want to delete this rule set? This action cannot be undone and will affect all associated rules."
+          confirmText="Delete"
+          variant="destructive"
+          onConfirm={() => {
+            if (deleteConfirm) {
+              handleDelete(deleteConfirm)
+              setDeleteConfirm(null)
+            }
+          }}
+        />
+      </>
     )
   }
 

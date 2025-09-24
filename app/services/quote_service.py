@@ -10,6 +10,8 @@ from uuid import uuid4
 
 from app.ai.intent_extractor import extract_intent
 from app.services.retrieval import ProductRetrieval
+from app.services.rule_engine import RuleEngine
+from app.services.item_feedback_analyzer import ItemFeedbackAnalyzer
 from schemas import QuoteRequest, QuoteResponse, QuoteItemRequest, QuoteItemResponse, QuoteFeedbackRequest, QuoteFeedbackResponse
 
 
@@ -19,6 +21,8 @@ class QuoteService:
     def __init__(self, conn: asyncpg.Connection):
         self.conn = conn
         self.retrieval = ProductRetrieval(conn)
+        self.rule_engine = RuleEngine(conn)
+        self.feedback_analyzer = ItemFeedbackAnalyzer(conn)
     
     async def generate_quote_data(self, prompt: str):
         """Generate quote data from prompt without saving to database."""
@@ -27,6 +31,9 @@ class QuoteService:
             intent = extract_intent(prompt)
             if not intent or 'items' not in intent:
                 raise ValueError("Could not extract product requirements from prompt")
+            
+            # Get feedback insights for similar prompts
+            feedback_insights = await self.feedback_analyzer.get_feedback_insights_for_prompt(prompt)
             
             currency = None
             total_amount = 0.0
@@ -43,42 +50,222 @@ class QuoteService:
                 candidates = await self.retrieval.search_products(item_want, prompt)
                 
                 if candidates:
-                    # Product found - use it
-                    best = candidates[0]
-                    selected_skus.add(best['sku'])
+                    # Apply business rules to candidates
+                    filtered_candidates, rule_executions = await self.rule_engine.apply_rules_to_candidates(
+                        candidates, item_want, intent
+                    )
                     
-                    # Calculate pricing
-                    unit_price = float(best.get('price', 0))
-                    subtotal = unit_price * quantity
-                    
-                    quote_items.append({
-                        'sku': best['sku'],
-                        'description': best['description'],
-                        'quantity': quantity,
-                        'unit_price': unit_price,
-                        'currency': best.get('currency', 'USD'),
-                        'subtotal': subtotal,
-                        'product_id': None,
-                        'metadata': {},
-                        'position': i
-                    })
-                    
-                    # Track totals
-                    if not currency:
-                        currency = best.get('currency', 'USD')
-                    total_amount += subtotal
+                    if filtered_candidates:
+                        # Product found - use the best one after rule application
+                        best = filtered_candidates[0]
+                        selected_skus.add(best['sku'])
+                        
+                        # Get feedback insights for this SKU
+                        sku_insights = await self.feedback_analyzer.get_feedback_insights_for_sku(best['sku'])
+                        
+                        # Check if we should use a suggested alternative based on feedback
+                        suggested_sku = None
+                        if sku_insights.get('has_feedback'):
+                            confidence_score = sku_insights.get('confidence_score', 1.0)
+                            
+                            # If confidence is low and we have suggested alternatives, use them
+                            if confidence_score < 0.7:  # Lower threshold for learning
+                                alternatives = sku_insights.get('alternatives', {})
+                                if alternatives.get('suggested_skus'):
+                                    # Filter out the current SKU from suggestions to avoid self-replacement
+                                    filtered_suggestions = {k: v for k, v in alternatives['suggested_skus'].items() if k != best['sku']}
+                                    
+                                    if filtered_suggestions:
+                                        # Get the most frequently suggested SKU that's different from the current
+                                        most_common_alt = max(filtered_suggestions.items(), key=lambda x: x[1])
+                                        suggested_sku = most_common_alt[0]
+                                    
+                                    # Search for the suggested SKU
+                                    suggested_candidates = await self.retrieval.search_products_by_sku(suggested_sku)
+                                    if suggested_candidates:
+                                        # Use the suggested product instead
+                                        best = suggested_candidates[0]
+                                        # Keep the original SKU, store replacement in metadata
+                                        best['_feedback_corrected'] = True
+                                        best['_original_sku'] = filtered_candidates[0]['sku']
+                                        best['_replacement_sku'] = suggested_sku
+                                        notes_parts.append(f"• Replaced {best['_original_sku']} with {suggested_sku} based on previous feedback")
+                        
+                        # Calculate pricing
+                        unit_price = float(best.get('price', 0))
+                        subtotal = unit_price * quantity
+                        
+                        # Create item metadata with feedback insights
+                        item_metadata = {
+                            'rule_score': best.get('rule_score', 1.0),
+                            'applied_rules': best.get('applied_rules', []),
+                            'feedback_insights': sku_insights,
+                            'feedback_corrected': best.get('_feedback_corrected', False),
+                            'original_sku': best.get('_original_sku', None),
+                            'replacement_sku': best.get('_replacement_sku', None)
+                        }
+                        
+                        # Add feedback-based adjustments
+                        if sku_insights.get('has_feedback'):
+                            confidence_score = sku_insights.get('confidence_score', 1.0)
+                            item_metadata['confidence_score'] = confidence_score
+                            
+                            # Add warning if confidence is still low after correction
+                            if confidence_score < 0.5 and not best.get('_feedback_corrected'):
+                                notes_parts.append(f"• Low confidence for {best['sku']} based on previous feedback")
+                        
+                        quote_items.append({
+                            'sku': best['sku'],
+                            'description': best['description'],
+                            'quantity': quantity,
+                            'unit_price': unit_price,
+                            'currency': best.get('currency', 'USD'),
+                            'subtotal': subtotal,
+                            'product_id': None,
+                            'metadata': item_metadata,
+                            'position': i
+                        })
+                        
+                        # Track totals
+                        if not currency:
+                            currency = best.get('currency', 'USD')
+                        total_amount += subtotal
                     
                 else:
-                    # Product not found - create fallback
+                    # Product not found - check for feedback suggestions
+                    original_sku = item_want.get('sku', f'ITEM-{i+1}')
+                    suggested_sku = None
+                    
+                    # First, try to get feedback insights for the original SKU
+                    sku_insights = await self.feedback_analyzer.get_feedback_insights_for_sku(original_sku)
+                    
+                    # Also check for missing product feedback using the product name from the prompt
+                    product_name = item_want.get('name', '') or item_want.get('description', '')
+                    missing_product_insights = None
+                    if product_name:
+                        missing_product_insights = await self.feedback_analyzer.get_feedback_insights_for_missing_product(product_name, prompt)
+                    
+                    # Use the insights with the most suggestions
+                    best_insights = sku_insights
+                    if missing_product_insights and missing_product_insights.get('has_feedback'):
+                        if not sku_insights.get('has_feedback') or len(missing_product_insights.get('alternatives', {}).get('suggested_skus', {})) > len(sku_insights.get('alternatives', {}).get('suggested_skus', {})):
+                            best_insights = missing_product_insights
+                            print(f"DEBUG: Using missing product insights for {product_name}")
+                    
+                    if best_insights.get('has_feedback'):
+                        alternatives = best_insights.get('alternatives', {})
+                        print(f"DEBUG: Feedback insights for {original_sku}: {best_insights}")
+                        print(f"DEBUG: Alternatives: {alternatives}")
+                        
+                        # Try to find a suggested SKU first
+                        suggested_sku = None
+                        if alternatives.get('suggested_skus'):
+                            # Filter out the current SKU from suggestions to avoid self-replacement
+                            filtered_suggestions = {k: v for k, v in alternatives['suggested_skus'].items() if k != original_sku}
+                            
+                            if filtered_suggestions:
+                                # Prioritize suggestions that appear in structured feedback (suggested_sku field)
+                                # over those extracted from comments
+                                structured_suggestions = {}
+                                comment_suggestions = {}
+                                
+                                # Check recent feedback to see which suggestions came from structured vs comment data
+                                recent_feedback = best_insights.get('recent_feedback', [])
+                                for feedback in recent_feedback:
+                                    if feedback.get('suggested_sku'):
+                                        structured_suggestions[feedback['suggested_sku']] = structured_suggestions.get(feedback['suggested_sku'], 0) + 1
+                                
+                                # If we have structured suggestions, prioritize them
+                                if structured_suggestions:
+                                    # Filter to only include structured suggestions that are in our filtered list
+                                    valid_structured = {k: v for k, v in structured_suggestions.items() if k in filtered_suggestions}
+                                    if valid_structured:
+                                        suggested_sku = max(valid_structured.items(), key=lambda x: x[1])[0]
+                                        print(f"DEBUG: Using structured suggestion: {suggested_sku} (from structured feedback)")
+                                    else:
+                                        # Fall back to most frequent suggestion
+                                        suggested_sku = max(filtered_suggestions.items(), key=lambda x: x[1])[0]
+                                        print(f"DEBUG: Using most frequent suggestion: {suggested_sku} (no valid structured suggestions)")
+                                else:
+                                    # No structured suggestions, use most frequent
+                                    suggested_sku = max(filtered_suggestions.items(), key=lambda x: x[1])[0]
+                                    print(f"DEBUG: Using most frequent suggestion: {suggested_sku} (no structured suggestions)")
+                            else:
+                                print(f"DEBUG: No valid suggestions found after filtering (original: {original_sku})")
+                            
+                            # Search for the suggested SKU
+                            suggested_candidates = await self.retrieval.search_products_by_sku(suggested_sku)
+                            if suggested_candidates:
+                                # Use the suggested product instead of fallback
+                                best = suggested_candidates[0]
+                                unit_price = float(best.get('price', 0))
+                                subtotal = unit_price * quantity
+                                
+                                quote_items.append({
+                                    'sku': original_sku,  # Keep the original searched SKU
+                                    'description': f"{best['description']} (Replaced with {suggested_sku} based on feedback)",
+                                    'quantity': quantity,
+                                    'unit_price': unit_price,
+                                    'currency': best.get('currency', 'USD'),
+                                    'subtotal': subtotal,
+                                    'product_id': best.get('id'),
+                                    'metadata': {
+                                        'feedback_corrected': True,
+                                        'original_sku': original_sku,
+                                        'replacement_sku': suggested_sku,  # Store the replacement SKU in metadata
+                                        'feedback_insights': best_insights,
+                                        'is_feedback_learning': True  # Mark as feedback learning
+                                    },
+                                    'position': i
+                                })
+                                
+                                notes_parts.append(f"• Replaced {original_sku} with {suggested_sku} based on previous feedback")
+                                total_amount += subtotal
+                                continue
+                        
+                        # If no specific SKU found, try to use product descriptions for learning
+                        if not suggested_sku and alternatives.get('product_descriptions'):
+                            product_descriptions = alternatives['product_descriptions']
+                            print(f"DEBUG: No specific SKU found, but have product descriptions: {product_descriptions}")
+                            
+                            # Create a learning note about what was suggested
+                            most_common_desc = max(product_descriptions.items(), key=lambda x: x[1])
+                            suggested_description = most_common_desc[0]
+                            
+                            # Create a fallback item with learning context
+                            quote_items.append({
+                                'sku': original_sku,
+                                'description': f"Product not found: {original_sku} (Previous feedback suggested: {suggested_description})",
+                                'quantity': quantity,
+                                'unit_price': 0.0,
+                                'currency': currency or 'USD',
+                                'subtotal': 0.0,
+                                'product_id': None,
+                                'metadata': {
+                                    'feedback_insights': sku_insights,
+                                    'suggested_description': suggested_description,
+                                    'learning_context': True
+                                },
+                                'position': i
+                            })
+                            
+                            notes_parts.append(f"• Item not found: {original_sku} (Previous feedback suggested: {suggested_description})")
+                            continue
+                    
+                    # No feedback suggestions or suggested product not found - create fallback
                     quote_items.append({
-                        'sku': item_want.get('sku', f'ITEM-{i+1}'),
-                        'description': f"Product not found: {item_want.get('sku', 'Unknown item')}",
+                        'sku': original_sku,
+                        'description': f"Product not found: {original_sku}",
                         'quantity': quantity,
                         'unit_price': 0.0,
                         'currency': currency or 'USD',
                         'subtotal': 0.0,
                         'product_id': None,
-                        'metadata': {},
+                        'metadata': {
+                            'feedback_insights': sku_insights,
+                            'suggested_sku': suggested_sku,
+                            'original_sku': original_sku  # Store original SKU for feedback context
+                        },
                         'position': i
                     })
                     
@@ -134,7 +321,7 @@ class QuoteService:
             await self.conn.execute('''
                 INSERT INTO quote_items (
                     id, quote_id, product_id, sku, description, quantity, 
-                    unit_price, currency, subtotal, metadata, position
+                    unit_price, currency, subtotal, item_metadata, position
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             ''', item_id, quote_id, item.product_id, item.sku, item.description,
                 item.quantity, item.unit_price, item.currency, item.subtotal,
@@ -160,6 +347,18 @@ class QuoteService:
         await self.conn.execute('''
             UPDATE quotes SET total_amount = $1 WHERE id = $2
         ''', total_amount, quote_id)
+        
+        # Create feedback if provided
+        if request.feedback:
+            feedback_id = str(uuid4())
+            await self.conn.execute('''
+                INSERT INTO quote_feedback (id, quote_id, rating, comment, labels, corrections, created_at)
+                VALUES ($1, $2, $3, $4, $5, $6, now())
+            ''', feedback_id, quote_id, 
+                getattr(request.feedback, 'rating', None), 
+                getattr(request.feedback, 'comment', None), 
+                json.dumps(request.feedback.labels) if request.feedback.labels else None,
+                getattr(request.feedback, 'corrections', None))
         
         # Get the created quote
         quote = await self.conn.fetchrow('''
@@ -216,53 +415,94 @@ class QuoteService:
                 candidates = await self.retrieval.search_products(item_want, request.prompt)
                 
                 if candidates:
-                    # Product found - use it
-                    best = candidates[0]
-                    selected_skus.add(best['sku'])
-                    
-                    # Calculate pricing
-                    unit_price = float(best.get('price', 0))
-                    subtotal = unit_price * quantity
-                    
-                    # Get product_id if available
-                    product_id = await self.conn.fetchval(
-                        'SELECT id FROM products WHERE sku = $1', best['sku']
+                    # Apply business rules to candidates
+                    filtered_candidates, rule_executions = await self.rule_engine.apply_rules_to_candidates(
+                        candidates, item_want, intent
                     )
                     
-                    # Create metadata
-                    metadata = {
-                        'is_fallback': best.get('_used_vector_fallback', False),
-                        'original_request': item_want.get('sku', ''),
-                        'search_method': 'vector_fallback' if best.get('_used_vector_fallback') else 'deterministic'
-                    }
-                    
-                    # Insert quote item
-                    item_id = str(uuid4())
-                    await self.conn.execute('''
-                        INSERT INTO quote_items (
-                            id, quote_id, product_id, sku, description, quantity, 
-                            unit_price, currency, subtotal, metadata, position
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-                    ''', item_id, quote_id, product_id, best['sku'], best['description'],
-                        quantity, unit_price, best.get('currency', 'USD'), subtotal,
-                        json.dumps(metadata), i)
-                    
-                    quote_items.append(QuoteItemResponse(
-                        id=item_id,
-                        sku=best['sku'],
-                        description=best['description'],
-                        quantity=quantity,
-                        unit_price=unit_price,
-                        currency=best.get('currency', 'USD'),
-                        subtotal=subtotal,
-                        product_id=product_id,
-                        metadata=metadata,
-                        position=i,
-                        created_at=datetime.now().isoformat()
-                    ))
-                    
-                    total_amount += subtotal
-                    notes_parts.append(f"{quantity}x {best['sku']} - {best['description']}")
+                    if filtered_candidates:
+                        # Product found - use the best one after rule application
+                        best = filtered_candidates[0]
+                        selected_skus.add(best['sku'])
+                        
+                        # Get feedback insights for this SKU and apply learning
+                        sku_insights = await self.feedback_analyzer.get_feedback_insights_for_sku(best['sku'])
+                        
+                        # Check if we should use a suggested alternative based on feedback
+                        if sku_insights.get('has_feedback'):
+                            confidence_score = sku_insights.get('confidence_score', 1.0)
+                            
+                            # If confidence is low and we have suggested alternatives, use them
+                            if confidence_score < 0.7:  # Lower threshold for learning
+                                alternatives = sku_insights.get('alternatives', {})
+                                if alternatives.get('suggested_skus'):
+                                    # Get the most frequently suggested SKU
+                                    most_common_alt = max(alternatives['suggested_skus'].items(), key=lambda x: x[1])
+                                    suggested_sku = most_common_alt[0]
+                                    
+                                    # Search for the suggested SKU
+                                    suggested_candidates = await self.retrieval.search_products_by_sku(suggested_sku)
+                                    if suggested_candidates:
+                                        # Use the suggested product instead
+                                        best = suggested_candidates[0]
+                                        # Keep the original SKU, store replacement in metadata
+                                        best['_feedback_corrected'] = True
+                                        best['_original_sku'] = filtered_candidates[0]['sku']
+                                        best['_replacement_sku'] = suggested_sku
+                        
+                        # Log rule executions for this quote
+                        if rule_executions:
+                            await self.rule_engine.log_rule_executions(quote_id, rule_executions)
+                        
+                        # Calculate pricing
+                        unit_price = float(best.get('price', 0))
+                        subtotal = unit_price * quantity
+                        
+                        # Get product_id if available
+                        product_id = await self.conn.fetchval(
+                            'SELECT id FROM products WHERE sku = $1', best['sku']
+                        )
+                        
+                        # Create item_metadata
+                        item_metadata = {
+                            'is_fallback': best.get('_used_vector_fallback', False),
+                            'original_request': item_want.get('sku', ''),
+                            'search_method': 'vector_fallback' if best.get('_used_vector_fallback') else 'deterministic',
+                            'rule_score': best.get('rule_score', 1.0),
+                            'applied_rules': best.get('applied_rules', []),
+                            'feedback_insights': sku_insights,
+                            'feedback_corrected': best.get('_feedback_corrected', False),
+                            'original_sku': best.get('_original_sku', None),
+                            'replacement_sku': best.get('_replacement_sku', None)
+                        }
+                        
+                        # Insert quote item
+                        item_id = str(uuid4())
+                        await self.conn.execute('''
+                            INSERT INTO quote_items (
+                                id, quote_id, product_id, sku, description, quantity, 
+                                unit_price, currency, subtotal, item_metadata, position
+                            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                        ''', item_id, quote_id, product_id, best['sku'], best['description'],
+                            quantity, unit_price, best.get('currency', 'USD'), subtotal,
+                            json.dumps(item_metadata), i)
+                        
+                        quote_items.append(QuoteItemResponse(
+                            id=item_id,
+                            sku=best['sku'],
+                            description=best['description'],
+                            quantity=quantity,
+                            unit_price=unit_price,
+                            currency=best.get('currency', 'USD'),
+                            subtotal=subtotal,
+                            product_id=product_id,
+                            metadata=item_metadata,
+                            position=i,
+                            created_at=datetime.now().isoformat()
+                        ))
+                        
+                        total_amount += subtotal
+                        notes_parts.append(f"{quantity}x {best['sku']} - {best['description']}")
                 
                 else:
                     # No product found - create fallback item
@@ -273,30 +513,31 @@ class QuoteService:
                     
                     # Insert fallback quote item
                     item_id = str(uuid4())
+                    original_sku = item_want.get('sku', f'ITEM-{i+1}')
                     await self.conn.execute('''
                         INSERT INTO quote_items (
                             id, quote_id, product_id, sku, description, quantity, 
-                            unit_price, currency, subtotal, metadata, position
+                            unit_price, currency, subtotal, item_metadata, position
                         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-                    ''', item_id, quote_id, None, fallback_sku, fallback_description,
+                    ''', item_id, quote_id, None, original_sku, f"Product not found: {original_sku}",
                         quantity, unit_price, currency or 'USD', subtotal,
-                        json.dumps({'is_fallback': True, 'original_request': item_want}), i)
+                        json.dumps({'is_fallback': True, 'original_request': item_want, 'original_sku': original_sku}), i)
                     
                     quote_items.append(QuoteItemResponse(
                         id=item_id,
-                        sku=fallback_sku,
-                        description=fallback_description,
+                        sku=original_sku,
+                        description=f"Product not found: {original_sku}",
                         quantity=quantity,
                         unit_price=unit_price,
                         currency=currency or 'USD',
                         subtotal=subtotal,
                         product_id=None,
-                        metadata={'is_fallback': True, 'original_request': item_want},
+                        metadata={'is_fallback': True, 'original_request': item_want, 'original_sku': original_sku},
                         position=i,
                         created_at=datetime.now().isoformat()
                     ))
                     
-                    notes_parts.append(f"{quantity}x {fallback_sku} - {fallback_description}")
+                    notes_parts.append(f"• Item not found: {original_sku}")
             
             # Update total amount
             await self.conn.execute('''
@@ -357,7 +598,7 @@ class QuoteService:
         # Get quote items
         items = await self.conn.fetch('''
             SELECT id, sku, description, quantity, unit_price, currency, subtotal,
-                   product_id, metadata, position, created_at
+                   product_id, item_metadata, position, created_at
             FROM quote_items 
             WHERE quote_id = $1 
             ORDER BY position ASC, created_at ASC
@@ -374,7 +615,7 @@ class QuoteService:
                 currency=item['currency'],
                 subtotal=float(item['subtotal']),
                 product_id=item['product_id'],
-                metadata=json.loads(item['metadata']) if item['metadata'] else None,
+                metadata=json.loads(item['item_metadata']) if item['item_metadata'] else None,
                 position=item['position'],
                 created_at=item['created_at'].isoformat()
             ))
@@ -408,7 +649,7 @@ class QuoteService:
             # Get quote items
             items = await self.conn.fetch('''
                 SELECT id, sku, description, quantity, unit_price, currency, subtotal,
-                       product_id, metadata, position, created_at
+                       product_id, item_metadata, position, created_at
                 FROM quote_items 
                 WHERE quote_id = $1 
                 ORDER BY position ASC, created_at ASC
@@ -425,7 +666,7 @@ class QuoteService:
                     currency=item['currency'],
                     subtotal=float(item['subtotal']),
                     product_id=item['product_id'],
-                    metadata=json.loads(item['metadata']) if item['metadata'] else None,
+                    metadata=json.loads(item['item_metadata']) if item['item_metadata'] else None,
                     position=item['position'],
                     created_at=item['created_at'].isoformat()
                 ))

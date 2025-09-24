@@ -6,7 +6,9 @@ import { Save, RotateCcw } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
 import QuotePromptForm from '../components/QuotePromptForm'
 import QuoteItemsEditor from '../components/QuoteItemsEditor'
+import QuoteFeedbackForm from '../components/QuoteFeedbackForm'
 import { useCreateQuote } from '../api'
+import { useCreateItemFeedback } from '../api-item-feedback'
 import { QuoteItem, QuoteGenResponse } from '@/lib-utils/types'
 import { useToast } from '@/components/ui/use-toast'
 import { formatCurrency } from '@/lib-utils/format'
@@ -15,13 +17,14 @@ export default function QuoteCreateFromPromptPage() {
   const navigate = useNavigate()
   const { toast } = useToast()
   const createQuote = useCreateQuote()
+  const createItemFeedback = useCreateItemFeedback()
 
   const [step, setStep] = useState<'prompt' | 'edit'>('prompt')
   const [generatedData, setGeneratedData] = useState<QuoteGenResponse | null>(null)
   const [items, setItems] = useState<QuoteItem[]>([])
-  const [notes, setNotes] = useState('')
   const [title, setTitle] = useState('')
   const [originalPrompt, setOriginalPrompt] = useState('')
+  const [feedback, setFeedback] = useState<any>(null)
 
   // Debug items changes
   const handleItemsChange = (newItems: QuoteItem[]) => {
@@ -39,8 +42,11 @@ export default function QuoteCreateFromPromptPage() {
     setOriginalPrompt(prompt)
     setGeneratedData(response)
     setItems(response.items)
-    setNotes(response.notes || '')
     setStep('edit')
+  }
+
+  const handleFeedback = (feedbackData: any) => {
+    setFeedback(feedbackData)
   }
 
   const handleSave = async () => {
@@ -54,17 +60,68 @@ export default function QuoteCreateFromPromptPage() {
     }
 
     try {
+      // Extract item-level feedback from items metadata
+      const itemFeedbackData = items
+        .filter(item => item.metadata?.item_feedback)
+        .map(item => ({
+          sku: item.metadata?.original_sku || item.sku, // Use original SKU for feedback mapping
+          feedback: item.metadata.item_feedback
+        }))
+
+      // Prepare feedback data for API
+      const feedbackRequest = feedback && feedback.product_feedback ? {
+        comment: feedback.product_feedback,
+        labels: {
+          product_feedback: feedback.product_feedback,
+          item_feedback_count: itemFeedbackData.length
+        }
+      } : undefined
+
       const quote = await createQuote.mutateAsync({
         title: title || undefined,
         prompt: originalPrompt,
         currency: generatedData?.currency || 'USD',
         items,
-        notes: notes || undefined,
+        feedback: feedbackRequest,
       })
 
+      // Save item-level feedback after quote is created
+      if (itemFeedbackData.length > 0) {
+        try {
+          // Find the corresponding quote items by SKU and save feedback
+          for (const itemFeedback of itemFeedbackData) {
+            // Find quote item by original SKU (for replaced items) or current SKU (for non-replaced items)
+            const quoteItem = quote.items?.find(item => {
+              // If this item was replaced, check if the original SKU matches
+              if (item.metadata?.original_sku) {
+                return item.metadata.original_sku === itemFeedback.sku
+              }
+              // Otherwise, check the current SKU
+              return item.sku === itemFeedback.sku
+            })
+            
+            if (quoteItem?.id) {
+              await createItemFeedback.mutateAsync({
+                itemId: quoteItem.id,
+                data: itemFeedback.feedback
+              })
+            }
+          }
+          console.log('Item feedback saved successfully')
+        } catch (error) {
+          console.error('Failed to save item feedback:', error)
+          // Don't fail the entire quote creation if feedback saving fails
+        }
+      }
+
+      const feedbackCount = itemFeedbackData.length
+      const hasGeneralFeedback = feedback && feedback.product_feedback
+      
       toast({
         title: 'Quote created successfully',
-        description: 'Your quote has been saved.',
+        description: feedbackCount > 0 || hasGeneralFeedback 
+          ? `Your quote has been saved with ${feedbackCount > 0 ? `${feedbackCount} item feedback${feedbackCount > 1 ? 's' : ''}` : ''}${feedbackCount > 0 && hasGeneralFeedback ? ' and ' : ''}${hasGeneralFeedback ? 'general feedback' : ''}.`
+          : 'Your quote has been saved.',
       })
 
       // Small delay to ensure cache invalidation completes
@@ -84,9 +141,9 @@ export default function QuoteCreateFromPromptPage() {
     setStep('prompt')
     setGeneratedData(null)
     setItems([])
-    setNotes('')
     setTitle('')
     setOriginalPrompt('')
+    setFeedback(null)
   }
 
   return (
@@ -121,59 +178,69 @@ export default function QuoteCreateFromPromptPage() {
       )}
 
       {step === 'edit' && generatedData && (
-        <div className="space-y-6">
-          {/* Quote Details with Total */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Quote Details</CardTitle>
-              <CardDescription>
-                Set a title for this quote
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-muted-foreground mb-1 block">Quote Title</label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Enter quote title (optional)"
-                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground mb-1 block">Original Prompt</label>
-                <div className="text-sm p-3 bg-muted rounded-md border">
-                  {originalPrompt}
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Quote Details with Total */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Quote Details</CardTitle>
+                <CardDescription>
+                  Set a title for this quote
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-1 block">Quote Title</label>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Enter quote title (optional)"
+                    className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
+                  />
                 </div>
-              </div>
-              <div className="pt-2 border-t">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Total</label>
-                    <p className="text-2xl font-bold">
-                      {formatCurrency(items.reduce((sum, item) => sum + (item.subtotal || 0), 0), generatedData.currency)}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <label className="text-sm font-medium text-muted-foreground">Items</label>
-                    <p className="text-lg font-semibold">
-                      {items.length} item{items.length !== 1 ? 's' : ''}
-                    </p>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-1 block">Original Prompt</label>
+                  <div className="text-sm p-3 bg-muted rounded-md border">
+                    {originalPrompt}
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+                <div className="pt-2 border-t">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Total</label>
+                      <p className="text-2xl font-bold">
+                        {formatCurrency(items.reduce((sum, item) => sum + (item.subtotal || 0), 0), generatedData.currency)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <label className="text-sm font-medium text-muted-foreground">Items</label>
+                      <p className="text-lg font-semibold">
+                        {items.length} item{items.length !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-          {/* Items Editor */}
-          <QuoteItemsEditor
-            items={items}
-            onItemsChange={handleItemsChange}
-            currency={generatedData.currency}
-            notes={notes}
-            onNotesChange={setNotes}
-          />
+            {/* Items Editor */}
+            <QuoteItemsEditor
+              items={items}
+              onItemsChange={handleItemsChange}
+              currency={generatedData.currency}
+            />
+          </div>
+
+          {/* Right Sidebar - Sticky Feedback */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-6">
+              <QuoteFeedbackForm
+                onFeedback={handleFeedback}
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>

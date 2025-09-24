@@ -7,7 +7,7 @@ export function useListRuleSets() {
   return useQuery({
     queryKey: ['rule-sets'],
     queryFn: async (): Promise<RuleSet[]> => {
-      const response = await api.get('/api/v1/rule_sets')
+      const response = await api.get('/v1/rule_sets')
       return response.data
     },
   })
@@ -17,7 +17,7 @@ export function useGetRuleSet(id: string) {
   return useQuery({
     queryKey: ['rule-sets', id],
     queryFn: async (): Promise<RuleSet> => {
-      const response = await api.get(`/api/v1/rule_sets/${id}`)
+      const response = await api.get(`/v1/rule_sets/${id}`)
       return response.data
     },
     enabled: !!id,
@@ -29,7 +29,7 @@ export function useCreateRuleSet() {
   
   return useMutation({
     mutationFn: async (data: CreateRuleSetRequest): Promise<RuleSet> => {
-      const response = await api.post('/api/v1/rule_sets', data)
+      const response = await api.post('/v1/rule_sets', data)
       return response.data
     },
     onSuccess: () => {
@@ -43,7 +43,7 @@ export function useUpdateRuleSet() {
   
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: UpdateRuleSetRequest }): Promise<RuleSet> => {
-      const response = await api.patch(`/api/v1/rule_sets/${id}`, data)
+      const response = await api.patch(`/v1/rule_sets/${id}`, data)
       return response.data
     },
     onSuccess: (_, { id }) => {
@@ -58,7 +58,7 @@ export function useDeleteRuleSet() {
   
   return useMutation({
     mutationFn: async (id: string): Promise<void> => {
-      await api.delete(`/api/v1/rule_sets/${id}`)
+      await api.delete(`/v1/rule_sets/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rule-sets'] })
@@ -71,7 +71,7 @@ export function useListRules(ruleSetId: string) {
   return useQuery({
     queryKey: ['rules', ruleSetId],
     queryFn: async (): Promise<Rule[]> => {
-      const response = await api.get(`/api/v1/rule_sets/${ruleSetId}/rules`)
+      const response = await api.get(`/v1/rule_sets/${ruleSetId}/rules`)
       return response.data
     },
     enabled: !!ruleSetId,
@@ -83,7 +83,7 @@ export function useCreateRule() {
   
   return useMutation({
     mutationFn: async (data: CreateRuleRequest): Promise<Rule> => {
-      const response = await api.post('/api/v1/rules', data)
+      const response = await api.post('/v1/rules', data)
       return response.data
     },
     onSuccess: (_, data) => {
@@ -97,7 +97,7 @@ export function useUpdateRule() {
   
   return useMutation({
     mutationFn: async ({ id, data, ruleSetId }: { id: string; data: UpdateRuleRequest; ruleSetId: string }): Promise<Rule> => {
-      const response = await api.patch(`/api/v1/rules/${id}`, data)
+      const response = await api.patch(`/v1/rules/${id}`, data)
       // Use ruleSetId to avoid unused parameter warning
       console.debug('Updating rule in rule set:', ruleSetId)
       return response.data
@@ -113,7 +113,7 @@ export function useDeleteRule() {
   
   return useMutation({
     mutationFn: async ({ id, ruleSetId }: { id: string; ruleSetId: string }): Promise<void> => {
-      await api.delete(`/api/v1/rules/${id}`)
+      await api.delete(`/v1/rules/${id}`)
       // Use ruleSetId to avoid unused parameter warning
       console.debug('Deleting rule from rule set:', ruleSetId)
     },

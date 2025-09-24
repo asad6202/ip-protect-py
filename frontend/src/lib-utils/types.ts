@@ -54,6 +54,7 @@ export type Brand = {
   }
   
   export type QuoteItem = {
+    id?: string
     sku: string
     description: string
     quantity: number
@@ -62,6 +63,7 @@ export type Brand = {
     subtotal: number
     product_id?: string | null
     metadata?: any
+    feedback_insights?: any
   }
   
   export type Quote = {
@@ -106,6 +108,7 @@ export type Brand = {
     priority: number
     condition: any
     actions: any
+    nlp_command?: string | null
     created_at: string
     updated_at: string
   }
@@ -144,6 +147,7 @@ export type Brand = {
       metadata?: unknown
     }>
     notes?: string
+    feedback?: CreateFeedbackRequest
   }
   
   export type UpdateQuoteRequest = Partial<CreateQuoteRequest> & {
@@ -155,6 +159,32 @@ export type Brand = {
     comment?: string
     labels?: any
     corrections?: any
+  }
+
+  export type QuoteItemFeedback = {
+    id: string
+    quote_item_id: string
+    quote_id: string
+    feedback_type: 'correct' | 'incorrect' | 'missing' | 'wrong_quantity' | 'wrong_price' | 'wrong_specs'
+    rating?: number | null
+    comment?: string | null
+    suggested_sku?: string | null
+    suggested_quantity?: number | null
+    suggested_price?: number | null
+    correction_data?: any
+    user_context?: any
+    created_at: string
+    updated_at: string
+  }
+
+  export type CreateItemFeedbackRequest = {
+    feedback_type: 'correct' | 'incorrect' | 'missing' | 'wrong_quantity' | 'wrong_price' | 'wrong_specs'
+    comment?: string
+    suggested_sku?: string
+    suggested_quantity?: number
+    suggested_price?: number
+    correction_data?: any
+    user_context?: any
   }
   
   export type CreateRuleSetRequest = {

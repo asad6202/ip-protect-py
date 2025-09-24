@@ -4,10 +4,11 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Trash2, Search } from 'lucide-react'
+import { Trash2, Search, MessageSquare } from 'lucide-react'
 import { QuoteItem, Product } from '@/lib-utils/types'
 import { formatCurrency } from '@/lib-utils/format'
 import ProductSearchDialog from './ProductSearchDialog'
+import ItemFeedbackDialog from './ItemFeedbackDialog'
 
 interface QuoteItemsEditorProps {
   items: QuoteItem[]
@@ -79,6 +80,23 @@ export default function QuoteItemsEditor({
     handleItemsChange(newItems)
   }
 
+  const handleItemFeedbackChange = (itemSku: string, feedback: any) => {
+    const newItems = localItems.map(item => {
+      if (item.sku === itemSku) {
+        return {
+          ...item,
+          metadata: {
+            ...item.metadata,
+            item_feedback: feedback
+          }
+        }
+      }
+      return item
+    })
+    setLocalItems(newItems)
+    handleItemsChange(newItems)
+  }
+
   const addEmptyItem = () => {
     const newItem: QuoteItem = {
       sku: '',
@@ -113,12 +131,31 @@ export default function QuoteItemsEditor({
       const newItems = [...localItems]
       const item = { ...newItems[editingItemIndex] }
       
-      item.sku = product.sku
+      // Store the original "Product not found" SKU for feedback purposes
+      const originalSku = item.sku; // This is the original "Product not found" SKU
+      
+      console.log('Manual replacement - Original SKU:', originalSku, 'Replacement SKU:', product.sku);
+      
+      // Update the item with replacement product details for database storage
+      item.sku = product.sku // Store replacement SKU in database
       item.description = product.description
       item.unit_price = product.price
       item.currency = product.currency
       item.subtotal = item.quantity * item.unit_price
       item.product_id = product.id
+      
+      // Store original SKU in metadata for feedback purposes
+      item.metadata = {
+        ...item.metadata,
+        search_method: 'manual',
+        is_manual_replacement: true,
+        original_sku: originalSku, // Keep original "Product not found" SKU for feedback
+        replacement_sku: product.sku, // Store the replacement SKU
+        replacement_description: product.description, // Store replacement description
+        replacement_price: product.price, // Store replacement price
+        replacement_currency: product.currency, // Store replacement currency
+        replaced_at: new Date().toISOString()
+      }
       
       newItems[editingItemIndex] = item
       console.log('Updated item:', item)
@@ -230,21 +267,25 @@ export default function QuoteItemsEditor({
                     <TableHead className="w-24">Qty</TableHead>
                     <TableHead className="w-32">Unit Price</TableHead>
                     <TableHead className="w-32">Subtotal</TableHead>
-                    <TableHead className="w-20">Actions</TableHead>
+                    <TableHead className="w-24">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {localItems.map((item, index) => {
                     const isNotFound = isProductNotFound(item)
+                    const isFeedbackLearning = item.metadata?.is_feedback_learning
                     return (
                       <TableRow 
                         key={index} 
-                        className={isNotFound ? 'bg-red-50 border-red-200' : ''}
+                        className={
+                          isNotFound ? 'bg-red-50 border-red-200' : 
+                          isFeedbackLearning ? 'bg-green-50 border-green-200' : ''
+                        }
                       >
                         <TableCell>
                           <div className="flex space-x-2">
                             <Input
-                              value={item.sku}
+                              value={item.metadata?.is_manual_replacement ? item.metadata.original_sku : item.sku}
                               onChange={(e) => updateItem(index, 'sku', e.target.value)}
                               placeholder="SKU"
                               className={`font-mono text-sm ${isNotFound ? 'border-red-300 bg-red-50' : ''}`}
@@ -258,6 +299,19 @@ export default function QuoteItemsEditor({
                               <Search className="h-4 w-4" />
                             </Button>
                           </div>
+                          {/* Show replacement SKU if available */}
+                          {item.metadata?.is_manual_replacement && item.metadata?.replacement_sku && (
+                            <div className="text-xs text-green-600 mt-1">
+                              Replaced with: <span className="font-mono">{item.sku}</span>
+                            </div>
+                          )}
+                          {/* Show feedback learning indicator */}
+                          {item.metadata?.is_feedback_learning && item.metadata?.replacement_sku && (
+                            <div className="text-xs text-blue-600 mt-1 flex items-center gap-1">
+                              <span>🧠</span>
+                              <span>Learned from feedback: <span className="font-mono">{item.metadata.replacement_sku}</span></span>
+                            </div>
+                          )}
                         </TableCell>
                       <TableCell>
                         <div className="space-y-2">
@@ -312,14 +366,43 @@ export default function QuoteItemsEditor({
                       </TableCell>
                       <TableCell>
                         <div className="flex space-x-1">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => openProductSearch(index)}
-                            title="Search products"
-                          >
-                            <Search className="h-4 w-4" />
-                          </Button>
+                          <ItemFeedbackDialog 
+                            item={item} 
+                            originalItem={(() => {
+                              // If this item was manually replaced, show the original "Product not found" item for feedback
+                              const hasReplacement = item.metadata?.is_manual_replacement || 
+                                                   item.metadata?.feedback_corrected || 
+                                                   item.metadata?.replacement_sku;
+                              
+                              console.log('Feedback dialog - Item SKU:', item.sku, 'Has replacement:', hasReplacement, 'Metadata:', item.metadata);
+                              
+                              // If this item was replaced, show the original "Product not found" item for feedback
+                              if (hasReplacement && item.metadata?.original_sku) {
+                                console.log('Feedback dialog - Showing original "Product not found" item for feedback:', item.metadata.original_sku);
+                                return {
+                                  sku: item.metadata.original_sku, // Use original SKU from metadata
+                                  description: `Product not found: ${item.metadata.original_sku}`,
+                                  quantity: item.quantity,
+                                  unit_price: 0, // Original was not found, so price was 0
+                                  currency: item.currency,
+                                  subtotal: 0,
+                                  product_id: null,
+                                  metadata: {}
+                                };
+                              }
+                              return undefined;
+                            })()}
+                            onFeedbackChange={handleItemFeedbackChange}
+                            trigger={
+                              <Button
+                                variant={item.metadata?.item_feedback ? "default" : "outline"}
+                                size="icon"
+                                title={item.metadata?.item_feedback ? "Edit feedback for this item" : "Provide feedback on this item"}
+                              >
+                                <MessageSquare className="h-4 w-4" />
+                              </Button>
+                            }
+                          />
                           <Button
                             variant="ghost"
                             size="icon"

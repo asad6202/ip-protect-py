@@ -9,19 +9,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   Edit, 
   Trash2, 
-  Copy, 
-  Download, 
-  Send,
-  MessageSquare,
-  Star
+  MessageSquare
 } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
 import EmptyState from '@/components/common/EmptyState'
 import ConfirmDialog from '@/components/common/ConfirmDialog'
 import { useGetQuote, useDeleteQuote, useUpdateQuote } from '../api'
-import { useGetFeedback } from '../../feedback/api'
-import FeedbackForm from '../../feedback/components/FeedbackForm'
+import { useGetQuoteItemFeedback } from '../api-item-feedback'
 import { formatCurrency, formatDateTime } from '@/lib-utils/format'
+import ItemFeedbackDialog from '../components/ItemFeedbackDialog'
+import ItemFeedbackDisplay from '../components/ItemFeedbackDisplay'
 
 const statusConfig = {
   draft: { color: 'bg-gray-100 text-gray-800', label: 'Draft' },
@@ -38,10 +35,9 @@ export default function QuoteDetailPage() {
   const [notes, setNotes] = useState('')
 
   const { data: quote, isLoading, error } = useGetQuote(id!)
-  const { data: feedback, isLoading: feedbackLoading } = useGetFeedback(id!)
+  const { data: itemFeedback = [] } = useGetQuoteItemFeedback(id!)
   const deleteQuote = useDeleteQuote()
   const updateQuote = useUpdateQuote()
-  const [showFeedbackForm, setShowFeedbackForm] = useState(false)
 
   const handleDelete = async () => {
     if (!quote) return
@@ -131,18 +127,6 @@ export default function QuoteDetailPage() {
         showBackButton
         children={
           <div className="flex space-x-2">
-            <Button className="btn-protect-outline">
-              <Copy className="mr-2 h-4 w-4" />
-              Duplicate
-            </Button>
-            <Button className="btn-protect-outline">
-              <Download className="mr-2 h-4 w-4" />
-              Export
-            </Button>
-            <Button className="btn-protect-outline">
-              <Send className="mr-2 h-4 w-4" />
-              Send
-            </Button>
             <Button
               variant="destructive"
               onClick={() => setDeleteConfirm(true)}
@@ -214,139 +198,112 @@ export default function QuoteDetailPage() {
                       <TableHead className="text-right">Qty</TableHead>
                       <TableHead className="text-right">Unit Price</TableHead>
                       <TableHead className="text-right">Subtotal</TableHead>
+                      <TableHead className="text-center">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {quote.items.map((item, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-mono text-sm">
-                          {item.sku}
-                        </TableCell>
-                        <TableCell>{item.description}</TableCell>
-                        <TableCell className="text-right">
-                          {item.quantity}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {formatCurrency(item.unit_price, item.currency)}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatCurrency(item.subtotal, item.currency)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {quote.items.map((item, index) => {
+                      const isFeedbackLearning = item.metadata?.is_feedback_learning
+                      return (
+                        <TableRow 
+                          key={index}
+                          className={isFeedbackLearning ? 'bg-green-50 border-green-200' : ''}
+                        >
+                          <TableCell className="font-mono text-sm">
+                            <div>
+                              {item.sku}
+                              {/* Show feedback learning indicator */}
+                              {isFeedbackLearning && item.metadata?.replacement_sku && (
+                                <div className="text-xs text-blue-600 mt-1 flex items-center gap-1">
+                                  <span>🧠</span>
+                                  <span>Learned: <span className="font-mono">{item.metadata.replacement_sku}</span></span>
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>{item.description}</TableCell>
+                          <TableCell className="text-right">
+                            {item.quantity}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatCurrency(item.unit_price, item.currency)}
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatCurrency(item.subtotal, item.currency)}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <ItemFeedbackDialog 
+                              item={item} 
+                              originalItem={(() => {
+                                // If this item was manually replaced, show the original "Product not found" item for feedback
+                                const hasReplacement = item.metadata?.is_manual_replacement || 
+                                                     item.metadata?.feedback_corrected || 
+                                                     item.metadata?.replacement_sku;
+                                
+                                console.log('QuoteDetailPage - Item SKU:', item.sku, 'Has replacement:', hasReplacement, 'Metadata:', item.metadata);
+                                
+                                // If this item was replaced, show the original "Product not found" item for feedback
+                                if (hasReplacement && item.metadata?.original_sku) {
+                                  console.log('QuoteDetailPage - Showing original "Product not found" item for feedback:', item.metadata.original_sku);
+                                  return {
+                                    sku: item.metadata.original_sku, // Use original SKU from metadata
+                                    description: `Product not found: ${item.metadata.original_sku}`,
+                                    quantity: item.quantity,
+                                    unit_price: 0, // Original was not found, so price was 0
+                                    currency: item.currency,
+                                    subtotal: 0,
+                                    product_id: null,
+                                    metadata: {}
+                                  };
+                                }
+                                return undefined;
+                              })()}
+                              trigger={
+                                <Button variant="outline" size="sm" className="gap-1">
+                                  <MessageSquare className="h-3 w-3" />
+                                  Feedback
+                                </Button>
+                              }
+                            />
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
                   </TableBody>
                 </Table>
               )}
             </CardContent>
           </Card>
 
-          {/* Feedback Section */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <MessageSquare className="h-5 w-5" />
-                    Feedback
-                  </CardTitle>
-                  <CardDescription>
-                    Share your thoughts to help us improve
-                  </CardDescription>
-                </div>
-                <Button 
-                  onClick={() => setShowFeedbackForm(true)}
-                  className="flex items-center gap-2 btn-protect-outline"
-                >
-                  <MessageSquare className="h-4 w-4" />
-                  Add Feedback
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {feedbackLoading ? (
-                <div className="space-y-4">
-                  {[1, 2].map((i) => (
-                    <div key={i} className="animate-pulse">
-                      <div className="h-4 bg-muted rounded w-1/4 mb-2"></div>
-                      <div className="h-3 bg-muted rounded w-3/4 mb-2"></div>
-                      <div className="h-3 bg-muted rounded w-1/2"></div>
+          {/* Item Feedback Summary */}
+          {itemFeedback.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Item Feedback Summary</CardTitle>
+                <CardDescription>
+                  Feedback provided for individual items in this quote
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {quote.items?.map((item) => {
+                  const itemFeedbackData = itemFeedback.filter(fb => fb.quote_item_id === item.id)
+                  if (itemFeedbackData.length === 0) return null
+                  
+                  return (
+                    <div key={item.id || item.sku}>
+                      <h4 className="font-medium text-sm text-gray-700 mb-2">
+                        {item.sku} - {item.description}
+                      </h4>
+                      <ItemFeedbackDisplay 
+                        feedback={itemFeedbackData} 
+                        itemId={item.id || item.sku}
+                      />
                     </div>
-                  ))}
-                </div>
-              ) : feedback && feedback.length > 0 ? (
-                <div className="space-y-4">
-                  {feedback.map((fb) => (
-                    <div key={fb.id} className="border rounded-lg p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          {fb.rating && (
-                            <div className="flex items-center gap-1">
-                              {[1, 2, 3, 4, 5].map((star) => (
-                                <Star
-                                  key={star}
-                                  className={`h-4 w-4 ${
-                                    star <= fb.rating! 
-                                      ? 'text-yellow-400 fill-current' 
-                                      : 'text-gray-300'
-                                  }`}
-                                />
-                              ))}
-                            </div>
-                          )}
-                          <span className="text-sm text-muted-foreground">
-                            {formatDateTime(fb.created_at)}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      {fb.comment && (
-                        <p className="text-sm mb-3">{fb.comment}</p>
-                      )}
-                      
-                      {fb.labels && (
-                        <div className="space-y-2">
-                          {(fb.labels as any).issues && (
-                            <div>
-                              <h4 className="text-sm font-medium text-red-600">Issues:</h4>
-                              <p className="text-sm text-muted-foreground">{(fb.labels as any).issues}</p>
-                            </div>
-                          )}
-                          {(fb.labels as any).suggestions && (
-                            <div>
-                              <h4 className="text-sm font-medium text-blue-600">Suggestions:</h4>
-                              <p className="text-sm text-muted-foreground">{(fb.labels as any).suggestions}</p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-6">
-                  <MessageSquare className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No feedback yet</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Be the first to provide feedback on this quote
-                  </p>
-                  <Button onClick={() => setShowFeedbackForm(true)} className="btn-protect-outline">
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    Add Feedback
-                  </Button>
-                </div>
-              )}
-
-              {/* Feedback Form */}
-              {showFeedbackForm && (
-                <div className="mt-6">
-                  <FeedbackForm
-                    quoteId={id!}
-                    onSuccess={() => setShowFeedbackForm(false)}
-                  />
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                  )
+                })}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Notes */}
           <Card>
@@ -445,45 +402,7 @@ export default function QuoteDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button className="w-full btn-protect-outline">
-                <Send className="mr-2 h-4 w-4" />
-                Send Quote
-              </Button>
-              <Button className="w-full btn-protect-outline">
-                <Download className="mr-2 h-4 w-4" />
-                Export PDF
-              </Button>
-              <Button className="w-full btn-protect-outline">
-                <Copy className="mr-2 h-4 w-4" />
-                Duplicate
-              </Button>
-            </CardContent>
-          </Card>
 
-          {/* Feedback */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Star className="mr-2 h-5 w-5" />
-                Feedback
-              </CardTitle>
-              <CardDescription>
-                Customer feedback and ratings
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-4 text-muted-foreground">
-                <Star className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No feedback yet</p>
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Metadata */}
           <Card>

@@ -4,31 +4,40 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Plus, Edit, Trash2, Code, Settings } from 'lucide-react'
+import { Plus, Edit, Trash2, Code, Settings, Wand2, Eye } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
 import EmptyState from '@/components/common/EmptyState'
 import ConfirmDialog from '@/components/common/ConfirmDialog'
 import RuleForm from '../components/RuleForm'
+import NLPRuleForm from '../components/NLPRuleForm'
+import RuleDetailsDialog from '../components/RuleDetailsDialog'
 import { useGetRuleSet, useListRules, useDeleteRule } from '../api'
 import { formatDateTime } from '@/lib-utils/format'
 
 export default function RuleSetDetailPage() {
   const { id } = useParams<{ id: string }>()
   const [showRuleForm, setShowRuleForm] = useState(false)
-  const [editingRule, setEditingRule] = useState<any>(null)
+  const [showNLPRuleForm, setShowNLPRuleForm] = useState(false)
+  const [viewingRule, setViewingRule] = useState<any>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
-  const { data: ruleSet, isLoading, error } = useGetRuleSet(id!)
-  const { data: rules, isLoading: rulesLoading } = useListRules(id!)
+  const { data: ruleSet, isLoading, error, refetch: refetchRuleSet } = useGetRuleSet(id!)
+  const { data: rules, isLoading: rulesLoading, refetch: refetchRules } = useListRules(id!)
   const deleteRule = useDeleteRule()
 
   const handleDelete = async (ruleId: string) => {
     if (!ruleSet) return
     try {
       await deleteRule.mutateAsync({ id: ruleId, ruleSetId: ruleSet.id })
+      refetchRules()
     } catch (error) {
       console.error('Error deleting rule:', error)
     }
+  }
+
+  const handleSuccess = () => {
+    refetchRules()
+    refetchRuleSet()
   }
 
   if (isLoading) {
@@ -89,10 +98,16 @@ export default function RuleSetDetailPage() {
         description={`Priority: ${ruleSet.priority} • ${ruleSet.is_active ? 'Active' : 'Inactive'}`}
         showBackButton
         children={
-          <Button onClick={() => setShowRuleForm(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Rule
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setShowNLPRuleForm(true)}>
+              <Wand2 className="mr-2 h-4 w-4" />
+              Add with NLP
+            </Button>
+            <Button onClick={() => setShowRuleForm(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Rule
+            </Button>
+          </div>
         }
       />
 
@@ -170,10 +185,16 @@ export default function RuleSetDetailPage() {
                 Manage individual rules in this set
               </CardDescription>
             </div>
-            <Button onClick={() => setShowRuleForm(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Rule
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setShowNLPRuleForm(true)}>
+                <Wand2 className="mr-2 h-4 w-4" />
+                Add with NLP
+              </Button>
+              <Button onClick={() => setShowRuleForm(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Rule
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -205,7 +226,14 @@ export default function RuleSetDetailPage() {
               <TableBody>
                 {rules.map((rule) => (
                   <TableRow key={rule.id}>
-                    <TableCell className="font-medium">{rule.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        {rule.name}
+                        {rule.nlp_command && (
+                          <Wand2 className="h-4 w-4 text-blue-500" title="Created via NLP" />
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline">
                         {rule.scope}
@@ -222,14 +250,16 @@ export default function RuleSetDetailPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => setEditingRule(rule)}
+                          onClick={() => setViewingRule(rule)}
+                          title="View details"
                         >
-                          <Edit className="h-4 w-4" />
+                          <Eye className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => setDeleteConfirm(rule.id)}
+                          title="Delete rule"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -244,19 +274,31 @@ export default function RuleSetDetailPage() {
       </Card>
 
       {/* Forms and Dialogs */}
+      <NLPRuleForm
+        open={showNLPRuleForm}
+        onOpenChange={setShowNLPRuleForm}
+        ruleSetId={ruleSet.id}
+        onSuccess={() => {
+          setShowNLPRuleForm(false)
+          handleSuccess()
+        }}
+      />
+
       <RuleForm
         open={showRuleForm}
         onOpenChange={setShowRuleForm}
         ruleSetId={ruleSet.id}
-        onSuccess={() => setShowRuleForm(false)}
+        onSuccess={() => {
+          setShowRuleForm(false)
+          handleSuccess()
+        }}
       />
 
-      <RuleForm
-        open={!!editingRule}
-        onOpenChange={(open) => !open && setEditingRule(null)}
-        ruleSetId={ruleSet.id}
-        rule={editingRule}
-        onSuccess={() => setEditingRule(null)}
+      <RuleDetailsDialog
+        open={!!viewingRule}
+        onOpenChange={(open) => !open && setViewingRule(null)}
+        rule={viewingRule}
+        onDelete={(ruleId) => setDeleteConfirm(ruleId)}
       />
 
       <ConfirmDialog

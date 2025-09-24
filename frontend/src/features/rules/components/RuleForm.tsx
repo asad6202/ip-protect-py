@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -78,14 +78,37 @@ export default function RuleForm({
   const form = useForm<RuleFormData>({
     resolver: zodResolver(ruleSchema),
     defaultValues: {
-      name: rule?.name || '',
-      active: rule?.active ?? true,
-      scope: rule?.scope || 'global',
-      priority: rule?.priority || 0,
-      condition: rule?.condition ? JSON.stringify(rule.condition, null, 2) : '',
-      actions: rule?.actions ? JSON.stringify(rule.actions, null, 2) : '',
+      name: '',
+      active: true,
+      scope: 'global',
+      priority: 0,
+      condition: '',
+      actions: '',
     },
   })
+
+  // Reset form when rule changes
+  useEffect(() => {
+    if (rule) {
+      form.reset({
+        name: rule.name,
+        active: rule.active,
+        scope: rule.scope,
+        priority: rule.priority,
+        condition: JSON.stringify(rule.condition, null, 2),
+        actions: JSON.stringify(rule.actions, null, 2),
+      })
+    } else {
+      form.reset({
+        name: '',
+        active: true,
+        scope: 'global',
+        priority: 0,
+        condition: '',
+        actions: '',
+      })
+    }
+  }, [rule, form])
 
   const validateJson = (value: string, field: 'condition' | 'actions') => {
     try {
@@ -142,6 +165,7 @@ export default function RuleForm({
       onOpenChange(false)
     } catch (error) {
       console.error('Error saving rule:', error)
+      // You could add a toast notification here
     }
   }
 

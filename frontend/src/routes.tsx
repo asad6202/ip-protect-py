@@ -10,7 +10,6 @@ import QuoteCreateFromPromptPage from './features/quotes/pages/QuoteCreateFromPr
 import QuoteDetailPage from './features/quotes/pages/QuoteDetailPage'
 import RuleSetListPage from './features/rules/pages/RuleSetListPage'
 import RuleSetDetailPage from './features/rules/pages/RuleSetDetailPage'
-import PromptRunListPage from './features/prompts/pages/PromptRunListPage'
 
 export const router = createBrowserRouter([
   {
@@ -76,10 +75,6 @@ export const router = createBrowserRouter([
             element: <RuleSetDetailPage />,
           },
         ],
-      },
-      {
-        path: 'prompts',
-        element: <PromptRunListPage />,
       },
     ],
   },

@@ -7,7 +7,7 @@ export function useGetFeedback(quoteId: string) {
   return useQuery({
     queryKey: ['feedback', quoteId],
     queryFn: async (): Promise<Feedback[]> => {
-      const response = await api.get(`/api/v1/quote/${quoteId}/feedback`)
+      const response = await api.get(`/v1/quote/${quoteId}/feedback`)
       return response.data
     },
     enabled: !!quoteId,
@@ -20,7 +20,7 @@ export function useCreateFeedback() {
   
   return useMutation({
     mutationFn: async ({ quoteId, data }: { quoteId: string; data: CreateFeedbackRequest }): Promise<Feedback> => {
-      const response = await api.post(`/api/v1/quote/${quoteId}/feedback`, data)
+      const response = await api.post(`/v1/quote/${quoteId}/feedback`, data)
       return response.data
     },
     onSuccess: (_, { quoteId }) => {

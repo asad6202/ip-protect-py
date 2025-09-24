@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { formatCurrency, formatRelativeTime } from '@/lib-utils/format'
 import { useDashboardStats, useRecentQuotes, useRecentUploads } from './api'
+import ItemFeedbackAnalytics from '../quotes/components/ItemFeedbackAnalytics'
 
 export default function DashboardPage() {
   // Fetch real data from APIs
@@ -224,6 +225,9 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Item Feedback Analytics */}
+      <ItemFeedbackAnalytics />
 
       {/* Quick Actions */}
       <Card className="border-protect-gray-light hover:border-protect-red/30 transition-all duration-200">

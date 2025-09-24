@@ -46,6 +46,7 @@ class Rule(Base):
     priority: Mapped[int] = mapped_column(Integer, nullable=False, server_default="100")
     condition: Mapped[dict] = mapped_column(JSONB, nullable=False)
     actions: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    nlp_command: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=text("now()")
     )

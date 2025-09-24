@@ -10,9 +10,19 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  optimizeDeps: {
+    exclude: [
+      'lucide-react',
+      '@tanstack/react-query',
+      'react-hook-form',
+      '@hookform/resolvers',
+      'zod',
+      'date-fns'
+    ]
+  },
   server: {
     host: '0.0.0.0', // Important for Replit
-    port: 5000,
+    port: 4000,
     strictPort: true,
     allowedHosts: true, // Allow all hosts for Replit
     proxy: {

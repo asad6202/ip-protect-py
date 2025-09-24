@@ -38,7 +38,10 @@ async def generate_quote(
         async with db._pool.acquire() as conn:
             quote_service = QuoteService(conn)
             # Only generate quote data without saving
-            return await quote_service.generate_quote_data(request.get('prompt'))
+            prompt = request.get('prompt', '')
+            if not prompt:
+                raise ValueError("Prompt is required")
+            return await quote_service.generate_quote_data(prompt)
     
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

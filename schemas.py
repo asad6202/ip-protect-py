@@ -40,6 +40,7 @@ class QuoteRequest(BaseModel):
     items: List[QuoteItemRequest] = Field(..., description="List of items in the quote")
     notes: Optional[str] = Field(None, description="Optional notes for the quote")
     extracted_intent: Optional[Dict[str, Any]] = Field(None, description="Extracted intent from the prompt")
+    feedback: Optional['QuoteFeedbackRequest'] = Field(None, description="Optional feedback to include with quote creation")
 
 class QuoteItemResponse(BaseModel):
     """Individual item in a quote response."""
@@ -54,6 +55,7 @@ class QuoteItemResponse(BaseModel):
     metadata: Optional[Dict[str, Any]] = None
     position: Optional[int] = None
     created_at: str
+    feedback_insights: Optional[Dict[str, Any]] = None  # Aggregated feedback insights for this item
 class QuoteResponse(BaseModel):
     """Response containing generated quote."""
     id: str
@@ -95,5 +97,33 @@ class QuoteFeedbackResponse(BaseModel):
     labels: Optional[Dict[str, Any]] = None
     corrections: Optional[Dict[str, Any]] = None
     created_at: str
+
+
+class QuoteItemFeedbackRequest(BaseModel):
+    """Request for item-level feedback."""
+    feedback_type: str = Field(..., description="Type of feedback: correct, incorrect, missing, wrong_quantity, wrong_price, wrong_specs")
+    comment: Optional[str] = Field(None, description="Detailed comment about the item")
+    suggested_sku: Optional[str] = Field(None, description="Suggested SKU if the current one is wrong")
+    suggested_quantity: Optional[int] = Field(None, ge=1, description="Suggested quantity if wrong")
+    suggested_price: Optional[float] = Field(None, ge=0, description="Suggested price if wrong")
+    correction_data: Optional[Dict[str, Any]] = Field(None, description="Structured correction data")
+    user_context: Optional[Dict[str, Any]] = Field(None, description="Additional context about why this item was wrong")
+
+
+class QuoteItemFeedbackResponse(BaseModel):
+    """Response for item-level feedback."""
+    id: str
+    quote_item_id: str
+    quote_id: str
+    feedback_type: str
+    rating: Optional[int] = None
+    comment: Optional[str] = None
+    suggested_sku: Optional[str] = None
+    suggested_quantity: Optional[int] = None
+    suggested_price: Optional[float] = None
+    correction_data: Optional[Dict[str, Any]] = None
+    user_context: Optional[Dict[str, Any]] = None
+    created_at: str
+    updated_at: str
 
 

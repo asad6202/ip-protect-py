@@ -8,7 +8,6 @@ import {
   ShoppingCart, 
   Building2, 
   Settings, 
-  FileText,
   Menu,
   ChevronLeft
 } from 'lucide-react'
@@ -20,7 +19,6 @@ const navigation = [
   { name: 'Products', href: '/products', icon: Package },
   { name: 'Brands', href: '/brands', icon: Building2 },
   { name: 'Rules', href: '/rules', icon: Settings },
-  { name: 'Prompts', href: '/prompts', icon: FileText },
 ]
 
 export default function Layout() {
