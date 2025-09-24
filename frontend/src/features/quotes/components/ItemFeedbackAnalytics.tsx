@@ -8,8 +8,7 @@ import {
   CheckCircle, 
   XCircle,
   BarChart3,
-  Target,
-  Users
+  Target
 } from 'lucide-react'
 import { useGetItemFeedbackAnalytics } from '../api-item-feedback'
 
@@ -60,7 +59,7 @@ export default function ItemFeedbackAnalytics() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {feedback_type_distribution.reduce((sum, item) => sum + item.count, 0)}
+              {feedback_type_distribution.reduce((sum: number, item: any) => sum + item.count, 0)}
             </div>
             <p className="text-xs text-muted-foreground">
               Item-level feedback entries
@@ -75,7 +74,7 @@ export default function ItemFeedbackAnalytics() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {feedback_type_distribution.find(item => item.feedback_type === 'correct')?.count || 0}
+              {feedback_type_distribution.find((item: any) => item.feedback_type === 'correct')?.count || 0}
             </div>
             <p className="text-xs text-muted-foreground">
               Correct item selections
@@ -91,8 +90,8 @@ export default function ItemFeedbackAnalytics() {
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
               {feedback_type_distribution
-                .filter(item => item.feedback_type !== 'correct')
-                .reduce((sum, item) => sum + item.count, 0)}
+                .filter((item: any) => item.feedback_type !== 'correct')
+                .reduce((sum: number, item: any) => sum + item.count, 0)}
             </div>
             <p className="text-xs text-muted-foreground">
               Items needing attention
@@ -126,8 +125,8 @@ export default function ItemFeedbackAnalytics() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {feedback_type_distribution.map((item) => {
-              const total = feedback_type_distribution.reduce((sum, i) => sum + i.count, 0)
+            {feedback_type_distribution.map((item: any) => {
+              const total = feedback_type_distribution.reduce((sum: number, i: any) => sum + i.count, 0)
               const percentage = (item.count / total) * 100
               
               const typeConfig = {
@@ -176,7 +175,7 @@ export default function ItemFeedbackAnalytics() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {problematic_skus.slice(0, 10).map((sku, index) => (
+            {problematic_skus.slice(0, 10).map((sku: any) => (
               <div key={sku.sku} className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="space-y-1">
                   <div className="font-mono text-sm font-medium">{sku.sku}</div>
@@ -184,7 +183,7 @@ export default function ItemFeedbackAnalytics() {
                     {sku.description}
                   </div>
                   <div className="flex gap-2">
-                    {sku.feedback_types.map((type) => (
+                    {sku.feedback_types.map((type: string) => (
                       <Badge key={type} variant="outline" className="text-xs">
                         {type.replace('_', ' ')}
                       </Badge>
@@ -220,7 +219,7 @@ export default function ItemFeedbackAnalytics() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {correction_patterns.slice(0, 8).map((pattern, index) => (
+            {correction_patterns.slice(0, 8).map((pattern: any) => (
               <div key={`${pattern.field}-${pattern.reason}`} className="flex items-center justify-between">
                 <div className="space-y-1">
                   <div className="font-medium capitalize">
@@ -249,7 +248,7 @@ export default function ItemFeedbackAnalytics() {
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {recent_trends.slice(0, 10).map((trend, index) => (
+            {recent_trends.slice(0, 10).map((trend: any) => (
               <div key={`${trend.date}-${trend.feedback_type}`} className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground">{trend.date}</span>

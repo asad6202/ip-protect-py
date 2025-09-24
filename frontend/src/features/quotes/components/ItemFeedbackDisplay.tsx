@@ -17,7 +17,7 @@ const feedbackTypeConfig = {
   wrong_specs: { icon: Package, color: 'bg-gray-100 text-gray-800', label: 'Wrong Specs' },
 }
 
-export default function ItemFeedbackDisplay({ feedback, itemId }: ItemFeedbackDisplayProps) {
+export default function ItemFeedbackDisplay({ feedback }: ItemFeedbackDisplayProps) {
   if (!feedback || feedback.length === 0) {
     return null
   }

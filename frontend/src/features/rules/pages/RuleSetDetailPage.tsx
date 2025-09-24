@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Plus, Edit, Trash2, Code, Settings, Wand2, Eye } from 'lucide-react'
+import { Plus, Trash2, Code, Settings, Wand2, Eye } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
 import EmptyState from '@/components/common/EmptyState'
 import ConfirmDialog from '@/components/common/ConfirmDialog'
@@ -230,7 +230,7 @@ export default function RuleSetDetailPage() {
                       <div className="flex items-center gap-2">
                         {rule.name}
                         {rule.nlp_command && (
-                          <Wand2 className="h-4 w-4 text-blue-500" title="Created via NLP" />
+                          <Wand2 className="h-4 w-4 text-blue-500" />
                         )}
                       </div>
                     </TableCell>
