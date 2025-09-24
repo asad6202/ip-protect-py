@@ -27,8 +27,8 @@ app.include_router(api_router, prefix="/api/v1")
 import os
 import sys
 
-# Check if we're in production mode
-is_production = os.getenv("ENVIRONMENT", "development").lower() == "production"
+# Check if we're in production mode (Replit sets REPLIT_DEPLOYMENT=1 when published)
+is_production = os.getenv("REPLIT_DEPLOYMENT") == "1" or os.getenv("ENVIRONMENT", "development").lower() == "production"
 
 # Only serve the frontend dist files in production mode
 if is_production and os.path.exists("frontend/dist"):
