@@ -1,0 +1,193 @@
+2025-09-24T11:56:16Z info: Deployment: dc415ebc-8e77-4992-8083-7414ec28a0b2
+2025-09-24T11:56:16Z info: Build: 003ab446-af76-4e66-b4b9-03bf696b528d
+2025-09-24T11:56:16Z info: Connecting to builder
+2025-09-24T11:56:19Z info: Builder connected
+2025-09-24T11:56:21Z info: Installing packages
+2025-09-24T11:56:23Z info: Starting Build
+Requirement already satisfied: fastapi==0.111.0 in ./.pythonlibs/lib/python3.11/site-packages (from -r requirements.txt (line 1)) (0.111.0)
+
+Requirement already satisfied: uvicorn==0.30.1 in ./.pythonlibs/lib/python3.11/site-packages (from uvicorn[standard]==0.30.1->-r requirements.txt (line 2)) (0.30.1)
+
+Requirement already satisfied: openai>=1.40.0 in ./.pythonlibs/lib/python3.11/site-packages (from -r requirements.txt (line 3)) (1.108.0)
+
+Requirement already satisfied: asyncpg==0.29.0 in ./.pythonlibs/lib/python3.11/site-packages (from -r requirements.txt (line 4)) (0.29.0)
+
+Requirement already satisfied: python-dotenv==1.0.1 in ./.pythonlibs/lib/python3.11/site-packages (from -r requirements.txt (line 5)) (1.0.1)
+
+Requirement already satisfied: pydantic>=2.7.0 in ./.pythonlibs/lib/python3.11/site-packages (from -r requirements.txt (line 6)) (2.11.9)
+
+Requirement already satisfied: jinja2==3.1.4 in ./.pythonlibs/lib/python3.11/site-packages (from -r requirements.txt (line 7)) (3.1.4)
+
+Requirement already satisfied: sqlalchemy>=2.0.0 in ./.pythonlibs/lib/python3.11/site-packages (from -r requirements.txt (line 8)) (2.0.43)
+
+Requirement already satisfied: psycopg2-binary>=2.9.0 in ./.pythonlibs/lib/python3.11/site-packages (from -r requirements.txt (line 9)) (2.9.10)
+
+Requirement already satisfied: pandas>=2.0.0 in ./.pythonlibs/lib/python3.11/site-packages (from -r requirements.txt (line 10)) (2.3.2)
+
+Requirement already satisfied: openpyxl>=3.1.0 in ./.pythonlibs/lib/python3.11/site-packages (from -r requirements.txt (line 11)) (3.1.5)
+
+Requirement already satisfied: alembic in ./.pythonlibs/lib/python3.11/site-packages (from -r requirements.txt (line 13)) (1.16.5)
+
+Requirement already satisfied: starlette<0.38.0,>=0.37.2 in ./.pythonlibs/lib/python3.11/site-packages (from fastapi==0.111.0->-r requirements.txt (line 1)) (0.37.2)
+
+Requirement already satisfied: typing-extensions>=4.8.0 in ./.pythonlibs/lib/python3.11/site-packages (from fastapi==0.111.0->-r requirements.txt (line 1)) (4.15.0)
+
+Requirement already satisfied: fastapi-cli>=0.0.2 in ./.pythonlibs/lib/python3.11/site-packages (from fastapi==0.111.0->-r requirements.txt (line 1)) (0.0.12)
+
+Requirement already satisfied: httpx>=0.23.0 in ./.pythonlibs/lib/python3.11/site-packages (from fastapi==0.111.0->-r requirements.txt (line 1)) (0.28.1)
+
+Requirement already satisfied: python-multipart>=0.0.7 in ./.pythonlibs/lib/python3.11/site-packages (from fastapi==0.111.0->-r requirements.txt (line 1)) (0.0.20)
+
+Requirement already satisfied: ujson!=4.0.2,!=4.1.0,!=4.2.0,!=4.3.0,!=5.0.0,!=5.1.0,>=4.0.1 in ./.pythonlibs/lib/python3.11/site-packages (from fastapi==0.111.0->-r requirements.txt (line 1)) (5.11.0)
+
+Requirement already satisfied: orjson>=3.2.1 in ./.pythonlibs/lib/python3.11/site-packages (from fastapi==0.111.0->-r requirements.txt (line 1)) (3.11.3)
+
+Requirement already satisfied: email_validator>=2.0.0 in ./.pythonlibs/lib/python3.11/site-packages (from fastapi==0.111.0->-r requirements.txt (line 1)) (2.3.0)
+
+Requirement already satisfied: click>=7.0 in ./.pythonlibs/lib/python3.11/site-packages (from uvicorn==0.30.1->uvicorn[standard]==0.30.1->-r requirements.txt (line 2)) (8.3.0)
+
+Requirement already satisfied: h11>=0.8 in ./.pythonlibs/lib/python3.11/site-packages (from uvicorn==0.30.1->uvicorn[standard]==0.30.1->-r requirements.txt (line 2)) (0.16.0)
+
+Requirement already satisfied: async-timeout>=4.0.3 in ./.pythonlibs/lib/python3.11/site-packages (from asyncpg==0.29.0->-r requirements.txt (line 4)) (5.0.1)
+
+Requirement already satisfied: MarkupSafe>=2.0 in ./.pythonlibs/lib/python3.11/site-packages (from jinja2==3.1.4->-r requirements.txt (line 7)) (3.0.2)
+
+Requirement already satisfied: httptools>=0.5.0 in ./.pythonlibs/lib/python3.11/site-packages (from uvicorn[standard]==0.30.1->-r requirements.txt (line 2)) (0.6.4)
+
+Requirement already satisfied: pyyaml>=5.1 in ./.pythonlibs/lib/python3.11/site-packages (from uvicorn[standard]==0.30.1->-r requirements.txt (line 2)) (6.0.2)
+
+Requirement already satisfied: uvloop!=0.15.0,!=0.15.1,>=0.14.0 in ./.pythonlibs/lib/python3.11/site-packages (from uvicorn[standard]==0.30.1->-r requirements.txt (line 2)) (0.21.0)
+
+Requirement already satisfied: watchfiles>=0.13 in ./.pythonlibs/lib/python3.11/site-packages (from uvicorn[standard]==0.30.1->-r requirements.txt (line 2)) (1.1.0)
+
+Requirement already satisfied: websockets>=10.4 in ./.pythonlibs/lib/python3.11/site-packages (from uvicorn[standard]==0.30.1->-r requirements.txt (line 2)) (15.0.1)
+
+Requirement already satisfied: anyio<5,>=3.5.0 in ./.pythonlibs/lib/python3.11/site-packages (from openai>=1.40.0->-r requirements.txt (line 3)) (4.10.0)
+
+Requirement already satisfied: distro<2,>=1.7.0 in ./.pythonlibs/lib/python3.11/site-packages (from openai>=1.40.0->-r requirements.txt (line 3)) (1.9.0)
+
+Requirement already satisfied: jiter<1,>=0.4.0 in ./.pythonlibs/lib/python3.11/site-packages (from openai>=1.40.0->-r requirements.txt (line 3)) (0.11.0)
+
+Requirement already satisfied: sniffio in ./.pythonlibs/lib/python3.11/site-packages (from openai>=1.40.0->-r requirements.txt (line 3)) (1.3.1)
+
+Requirement already satisfied: tqdm>4 in ./.pythonlibs/lib/python3.11/site-packages (from openai>=1.40.0->-r requirements.txt (line 3)) (4.67.1)
+
+Requirement already satisfied: annotated-types>=0.6.0 in ./.pythonlibs/lib/python3.11/site-packages (from pydantic>=2.7.0->-r requirements.txt (line 6)) (0.7.0)
+
+Requirement already satisfied: pydantic-core==2.33.2 in ./.pythonlibs/lib/python3.11/site-packages (from pydantic>=2.7.0->-r requirements.txt (line 6)) (2.33.2)
+
+Requirement already satisfied: typing-inspection>=0.4.0 in ./.pythonlibs/lib/python3.11/site-packages (from pydantic>=2.7.0->-r requirements.txt (line 6)) (0.4.1)
+
+Requirement already satisfied: greenlet>=1 in ./.pythonlibs/lib/python3.11/site-packages (from sqlalchemy>=2.0.0->-r requirements.txt (line 8)) (3.2.4)
+
+Requirement already satisfied: numpy>=1.23.2 in ./.pythonlibs/lib/python3.11/site-packages (from pandas>=2.0.0->-r requirements.txt (line 10)) (2.3.3)
+
+Requirement already satisfied: python-dateutil>=2.8.2 in ./.pythonlibs/lib/python3.11/site-packages (from pandas>=2.0.0->-r requirements.txt (line 10)) (2.9.0.post0)
+
+Requirement already satisfied: pytz>=2020.1 in ./.pythonlibs/lib/python3.11/site-packages (from pandas>=2.0.0->-r requirements.txt (line 10)) (2025.2)
+
+Requirement already satisfied: tzdata>=2022.7 in ./.pythonlibs/lib/python3.11/site-packages (from pandas>=2.0.0->-r requirements.txt (line 10)) (2025.2)
+
+Requirement already satisfied: et-xmlfile in ./.pythonlibs/lib/python3.11/site-packages (from openpyxl>=3.1.0->-r requirements.txt (line 11)) (2.0.0)
+
+Requirement already satisfied: Mako in ./.pythonlibs/lib/python3.11/site-packages (from alembic->-r requirements.txt (line 13)) (1.3.10)
+
+Requirement already satisfied: idna>=2.8 in ./.pythonlibs/lib/python3.11/site-packages (from anyio<5,>=3.5.0->openai>=1.40.0->-r requirements.txt (line 3)) (3.10)
+
+Requirement already satisfied: dnspython>=2.0.0 in ./.pythonlibs/lib/python3.11/site-packages (from email_validator>=2.0.0->fastapi==0.111.0->-r requirements.txt (line 1)) (2.8.0)
+
+Requirement already satisfied: typer>=0.15.1 in ./.pythonlibs/lib/python3.11/site-packages (from fastapi-cli>=0.0.2->fastapi==0.111.0->-r requirements.txt (line 1)) (0.17.4)
+
+Requirement already satisfied: rich-toolkit>=0.14.8 in ./.pythonlibs/lib/python3.11/site-packages (from fastapi-cli>=0.0.2->fastapi==0.111.0->-r requirements.txt (line 1)) (0.15.1)
+
+Requirement already satisfied: certifi in ./.pythonlibs/lib/python3.11/site-packages (from httpx>=0.23.0->fastapi==0.111.0->-r requirements.txt (line 1)) (2025.8.3)
+
+Requirement already satisfied: httpcore==1.* in ./.pythonlibs/lib/python3.11/site-packages (from httpx>=0.23.0->fastapi==0.111.0->-r requirements.txt (line 1)) (1.0.9)
+
+Requirement already satisfied: six>=1.5 in ./.pythonlibs/lib/python3.11/site-packages (from python-dateutil>=2.8.2->pandas>=2.0.0->-r requirements.txt (line 10)) (1.17.0)
+
+Requirement already satisfied: rich>=13.7.1 in ./.pythonlibs/lib/python3.11/site-packages (from rich-toolkit>=0.14.8->fastapi-cli>=0.0.2->fastapi==0.111.0->-r requirements.txt (line 1)) (14.1.0)
+
+Requirement already satisfied: shellingham>=1.3.0 in ./.pythonlibs/lib/python3.11/site-packages (from typer>=0.15.1->fastapi-cli>=0.0.2->fastapi==0.111.0->-r requirements.txt (line 1)) (1.5.4)
+
+Requirement already satisfied: markdown-it-py>=2.2.0 in ./.pythonlibs/lib/python3.11/site-packages (from rich>=13.7.1->rich-toolkit>=0.14.8->fastapi-cli>=0.0.2->fastapi==0.111.0->-r requirements.txt (line 1)) (4.0.0)
+
+Requirement already satisfied: pygments<3.0.0,>=2.13.0 in ./.pythonlibs/lib/python3.11/site-packages (from rich>=13.7.1->rich-toolkit>=0.14.8->fastapi-cli>=0.0.2->fastapi==0.111.0->-r requirements.txt (line 1)) (2.19.2)
+
+Requirement already satisfied: mdurl~=0.1 in ./.pythonlibs/lib/python3.11/site-packages (from markdown-it-py>=2.2.0->rich>=13.7.1->rich-toolkit>=0.14.8->fastapi-cli>=0.0.2->fastapi==0.111.0->-r requirements.txt (line 1)) (0.1.2)
+
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+
+
+up to date, audited 429 packages in 2s
+
+
+99 packages are looking for funding
+
+  run `npm fund` for details
+
+
+2 moderate severity vulnerabilities
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+
+npm notice
+npm notice New major version of npm available! 10.8.2 -> 11.6.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.6.0
+npm notice To update run: npm install -g npm@11.6.0
+npm notice
+
+
+> ip-protect-frontend@0.0.0 build
+> tsc && vite build
+
+
+vite v5.4.20 building for production...
+
+transforming...
+
+✓ 1938 modules transformed.
+
+rendering chunks...
+
+computing gzip size...
+
+dist/index.html                   0.48 kB │ gzip:   0.31 kB
+
+dist/assets/index-cPJ08Qaf.css   38.14 kB │ gzip:   7.39 kB
+
+dist/assets/index-BmhE40Yx.js   713.58 kB │ gzip: 209.77 kB
+
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+✓ built in 5.94s
+
+2025-09-24T11:56:54Z info: Pushing pid1 binary layer...
+2025-09-24T11:56:59Z info: Pushing Repl layer...
+2025-09-24T11:56:59Z info: Pushing hosting layer...
+2025-09-24T11:57:00Z info: Retrieved cached nix layer
+2025-09-24T11:57:01Z info: Created hosting layer
+2025-09-24T11:57:03Z info: Created pid1 binary layer
+2025-09-24T11:58:03Z info: Created Repl layer
+2025-09-24T11:58:03Z info: Pushing Repl (cache) layer...
+2025-09-24T11:58:04Z info: Created Repl (cache) layer
+2025-09-24T11:58:12Z info: Pushed image manifest
+2025-09-24T11:58:15Z info: Pushed soci index manifest
+2025-09-24T11:58:20Z info: Creating Autoscale service
+forwarding local port 5000 to external port 80 (mapped as 1104)
+starting up user application
+        on_event is deprecated, use lifespan event handlers instead.
+        Read more about it in the
+        on_event is deprecated, use lifespan event handlers instead.
+INFO:     Started reloader process [25] using WatchFiles
+INFO:     Waiting for application startup.
+INFO:     Started server process [40]
