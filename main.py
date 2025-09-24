@@ -71,6 +71,8 @@ async def query_endpoint(payload: QueryRequest) -> QueryResponse:
     return QueryResponse(results=results, sql=sql)
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8001, reload=True)
+    # Use port 5000 for production deployment, 8001 for development
+    port = 5000 if is_production else 8001
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=not is_production)
 
 
