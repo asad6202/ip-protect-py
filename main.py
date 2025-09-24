@@ -71,6 +71,6 @@ async def query_endpoint(payload: QueryRequest) -> QueryResponse:
     return QueryResponse(results=results, sql=sql)
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=5000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8001, reload=True)
 
 

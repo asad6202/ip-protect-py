@@ -22,12 +22,12 @@ export default defineConfig({
   },
   server: {
     host: '0.0.0.0', // Important for Replit
-    port: 4000,
+    port: 5000,
     strictPort: true,
     allowedHosts: true, // Allow all hosts for Replit
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://localhost:8001',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '')
       }

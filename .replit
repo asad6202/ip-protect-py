@@ -19,17 +19,29 @@ args = "Full Stack App"
 name = "Full Stack App"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python main.py"
-waitForPort = 5000
-
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "bash -c \"python main.py & cd frontend && npm install && npm run dev\""
+waitForPort = 5000
+
+[[ports]]
+localPort = 4000
+externalPort = 3000
 
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 8001
+externalPort = 3002
+
+[[ports]]
+localPort = 41437
+externalPort = 3001
 
 [nix]
 channel = "stable-25_05"
