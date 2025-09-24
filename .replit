@@ -46,4 +46,4 @@ packages = ["glibcLocales", "libxcrypt", "postgresql"]
 [deployment]
 deploymentTarget = "autoscale"
 run = ["python", "main.py"]
-build = ["sh", "-c", "(cd frontend && npm install && npm run build)"]
+build = ["bash", "-c", "cd /home/runner/workspace && pip install -r requirements.txt && alembic upgrade head && cd frontend && npm install && npm run build"]
