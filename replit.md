@@ -37,6 +37,13 @@ Preferred communication style: Simple, everyday language.
   - Quote Builder Agent: Generates structured quote data from natural language
   - Guardrails System: PII detection, content moderation, and jailbreak prevention
   - Uses OPENAI_API_KEY from environment secrets for secure API access
+- **AI-Powered Chat Interface**: Interactive quote modification system
+  - Natural language chat interface for modifying existing quotes
+  - File attachment support (images, PDFs, documents) for additional context
+  - GPT-4o processes chat messages to understand modification requests
+  - Automated product search and quote updates (add, remove, replace items)
+  - Persistent chat history per quote stored in database metadata
+  - Real-time quote updates with UI refresh on modifications
 - **Intent Extraction**: GPT-4o-powered parsing of natural language requirements into structured search criteria
 - **Hybrid Search**: Deterministic keyword matching with optional vector similarity fallback
 - **Product Matching**: Family-aware search (camera/NVR/switch) with feature normalization
