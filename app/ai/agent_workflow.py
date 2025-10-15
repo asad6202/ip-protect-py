@@ -152,20 +152,19 @@ PRODUCT CATALOG CONTEXT
 
 CRITICAL INSTRUCTIONS
 1) Parse the USER REQUEST and extract product requirements (tolerate typos like "outdor" = "outdoor")
-2) ALWAYS include ALL necessary installation components for a complete system:
+2) Include essential installation components for a complete system:
    - Cameras (as requested)
    - NVR (Network Video Recorder) - 1 unit to record all cameras (ensure sufficient channels)
    - PoE Switch - 1 unit to power all cameras (ensure sufficient ports)
-   - Cables/Accessories - patch cables, mounting hardware, power supplies if needed
+   - Note: Skip cables/patch cords as they're sourced separately
 3) Calculate quantities intelligently:
    - NVR channels: At least equal to camera count (round up to common sizes: 4, 8, 16, 32)
    - Switch ports: At least equal to camera count + 1 for uplink (round up to common sizes: 8, 16, 24, 48)
 4) For each item, specify detailed requirements using DATABASE-FRIENDLY TERMS:
-   - Resolution: Use "2mp", "4mp", "5mp", "8mp" instead of "4k" or "1080p"
-   - IR/Night Vision: Use "ir" (the system will expand this)
-   - Vandal Resistance: Use "vandal", "ik10" 
-   - PoE: Use "poe" or "poe+"
-   - Video Codec: Use "h.265" or "h.264"
+   - Cameras: Use "2mp", "4mp", "5mp", "8mp", "ir", "poe", "vandal", "ik10", "h.265"
+   - NVR: MUST include "recorder" in features array
+   - Switches: Use "poe", and port count like "8-port", "16-port" 
+   - Note: Skip standalone cables/accessories since they're typically sourced separately
 
 OUTPUT FORMAT (JSON):
 {{
@@ -190,7 +189,10 @@ OUTPUT FORMAT (JSON):
 }}
 
 EXAMPLE: If user says "Need 4 outdoor cameras"
-Return items for: 4x outdoor cameras (5mp, ir, poe, outdoor, bullet), 1x 8-channel NVR, 1x 8-port PoE switch, 4x patch cables
+Return items for: 
+- 4x outdoor bullet cameras with features ["5mp", "ir", "poe", "outdoor", "vandal"]
+- 1x NVR with features ["recorder"] (MUST include "recorder")
+- 1x PoE switch with features ["8-port", "poe"]
 
 Return ONLY valid JSON."""
             
