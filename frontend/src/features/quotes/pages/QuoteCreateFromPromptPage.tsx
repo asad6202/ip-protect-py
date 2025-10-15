@@ -5,14 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Save, RotateCcw } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
 import QuotePromptForm from '../components/QuotePromptForm'
-import QuoteItemsEditor from '../components/QuoteItemsEditor'
 import QuoteFeedbackForm from '../components/QuoteFeedbackForm'
 import QuoteWidget from '../components/QuoteWidget'
 import { useCreateQuote } from '../api'
 import { useCreateItemFeedback } from '../api-item-feedback'
 import { QuoteItem, QuoteGenResponse } from '@/lib-utils/types'
 import { useToast } from '@/components/ui/use-toast'
-import { formatCurrency } from '@/lib-utils/format'
 
 export default function QuoteCreateFromPromptPage() {
   const navigate = useNavigate()
@@ -26,18 +24,6 @@ export default function QuoteCreateFromPromptPage() {
   const [title, setTitle] = useState('')
   const [originalPrompt, setOriginalPrompt] = useState('')
   const [feedback, setFeedback] = useState<any>(null)
-
-  // Debug items changes
-  const handleItemsChange = (newItems: QuoteItem[]) => {
-    console.log('🎯 Parent: handleItemsChange called with:', newItems)
-    console.log('🎯 Parent: items length:', newItems.length)
-    console.log('🎯 Parent: current items before update:', items)
-    setItems(newItems)
-    console.log('🎯 Parent: items state updated')
-  }
-
-  // Debug current items
-  console.log('🎯 Parent: Current items state:', items)
 
   const handleGenerate = (prompt: string, response: QuoteGenResponse) => {
     setOriginalPrompt(prompt)
@@ -213,13 +199,6 @@ export default function QuoteCreateFromPromptPage() {
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
               }}
-            />
-
-            {/* Items Editor */}
-            <QuoteItemsEditor
-              items={items}
-              onItemsChange={handleItemsChange}
-              currency={generatedData.currency}
             />
           </div>
 
