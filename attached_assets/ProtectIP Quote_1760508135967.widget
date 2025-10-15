@@ -1,0 +1,465 @@
+{
+  "version": "1.0",
+  "name": "ProtectIP Quote",
+  "template": "{\"type\":\"Card\",\"size\":\"md\",\"background\":\"surface-elevated\",\"confirm\":{\"label\":\"Send quote\",\"action\":{\"type\":\"quote.send\",\"payload\":{\"quoteId\":{{ (quoteId) | tojson }},\"items\":{{ (items) | tojson }},\"total\":{{ (grandTotalFormatted) | tojson }}}}},\"children\":[{\"type\":\"Row\",\"align\":\"center\",\"padding\":{\"x\":4,\"y\":4},\"gap\":3,\"background\":\"#ffffff\",\"children\":[{\"type\":\"Image\",\"src\":{{ (brand.logo) | tojson }},\"alt\":{{ (brand.name) | tojson }},\"width\":160,\"height\":40,\"fit\":\"contain\",\"radius\":\"none\",\"children\":[]},{\"type\":\"Spacer\",\"children\":[]},{\"type\":\"Badge\",\"label\":{{ ((\"Quote #\" ~ quoteId)) | tojson }},\"color\":\"secondary\",\"variant\":\"soft\",\"size\":\"sm\",\"children\":[]}]},{\"type\":\"Row\",\"padding\":{\"x\":4,\"y\":3},\"background\":\"#111111\",\"children\":[{\"type\":\"Col\",\"children\":[{\"type\":\"Title\",\"value\":\"Quote items\",\"size\":\"md\",\"color\":\"#ffffff\",\"children\":[]},{\"type\":\"Caption\",\"value\":{{ ((items.length ~ \" items\")) | tojson }},\"size\":\"sm\",\"color\":\"#e5e5e5\",\"children\":[]}]},{\"type\":\"Spacer\",\"children\":[]},{\"type\":\"Badge\",\"label\":\"DRAFT\",\"size\":\"sm\",\"color\":\"danger\",\"variant\":\"solid\",\"children\":[]}]},{\"type\":\"ListView\",\"children\":[{%- set _c -%}{%-for item in items -%},{\"type\":\"ListViewItem\",\"key\":{{ ((item.id ~ \"-\" ~ idx)) | tojson }},\"gap\":0,\"children\":[{\"type\":\"Row\",\"gap\":3,\"align\":\"stretch\",\"padding\":{\"x\":4,\"y\":3},\"background\":\"#ffffff\",\"border\":{\"bottom\":{\"size\":1,\"color\":\"subtle\"}},\"children\":[{\"type\":\"Col\",\"flex\":1,\"gap\":1,\"children\":[{\"type\":\"Text\",\"value\":{{ (item.description) | tojson }},\"size\":\"sm\",\"weight\":\"semibold\",\"maxLines\":2,\"color\":\"emphasis\",\"children\":[]},{\"type\":\"Caption\",\"value\":{{ ((\"SKU: \" ~ item.sku ~ (none))) | tojson }},\"color\":\"secondary\",\"children\":[]},{\"type\":\"Caption\",\"value\":{{ ((\"Unit: \" ~ item.unitPriceFormatted)) | tojson }},\"color\":\"secondary\",\"children\":[]}]},{\"type\":\"Col\",\"minWidth\":120,\"align\":\"end\",\"gap\":1,\"children\":[{\"type\":\"Caption\",\"value\":{{ ((\"Qty: \" ~ item.quantity)) | tojson }},\"color\":\"secondary\",\"children\":[]},{\"type\":\"Text\",\"value\":{{ (item.subtotalFormatted) | tojson }},\"size\":\"sm\",\"weight\":\"semibold\",\"children\":[]}]}]}]}{%-endfor-%}{%- endset -%}{{- (_c[1:] if _c and _c[0] == ',' else _c) -}}]},{\"type\":\"Divider\",\"children\":[]},{\"type\":\"Row\",\"padding\":{\"x\":4,\"y\":3},\"background\":\"#ffffff\",\"children\":[{\"type\":\"Col\",\"children\":[]},{\"type\":\"Col\",\"minWidth\":260,\"gap\":2,\"children\":[{%- set _c -%},{\"type\":\"Row\",\"children\":[{\"type\":\"Text\",\"value\":\"Subtotal\",\"color\":\"secondary\",\"children\":[]},{\"type\":\"Spacer\",\"children\":[]},{\"type\":\"Text\",\"value\":{{ (subtotalFormatted) | tojson }},\"children\":[]}]}{%-if none -%},{\"type\":\"Row\",\"children\":[{\"type\":\"Text\",\"value\":{{ ((\"Discount\" ~ (none))) | tojson }},\"color\":\"secondary\",\"children\":[]},{\"type\":\"Spacer\",\"children\":[]},{\"type\":\"Text\",\"value\":{{ ((\"- \" ~ discount.formatted)) | tojson }},\"children\":[]}]}{%-else-%}{%-endif-%}{%-if none -%},{\"type\":\"Row\",\"children\":[{\"type\":\"Text\",\"value\":{{ ((\"Tax\" ~ (none))) | tojson }},\"color\":\"secondary\",\"children\":[]},{\"type\":\"Spacer\",\"children\":[]},{\"type\":\"Text\",\"value\":{{ (tax.formatted) | tojson }},\"children\":[]}]}{%-else-%}{%-endif-%},{\"type\":\"Row\",\"padding\":{\"x\":4,\"y\":2},\"background\":\"#111111\",\"radius\":\"lg\",\"children\":[{\"type\":\"Text\",\"value\":\"Total\",\"weight\":\"semibold\",\"color\":\"#ffffff\",\"children\":[]},{\"type\":\"Spacer\",\"children\":[]},{\"type\":\"Text\",\"value\":{{ (grandTotalFormatted) | tojson }},\"weight\":\"bold\",\"size\":\"md\",\"color\":\"#ffffff\",\"children\":[]}]}{%- endset -%}{{- (_c[1:] if _c and _c[0] == ',' else _c) -}}]}]}]}",
+  "jsonSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "widget",
+    "type": "object",
+    "properties": {
+      "brand": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "logo": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": [
+          "name",
+          "logo"
+        ],
+        "additionalProperties": false
+      },
+      "quoteId": {
+        "type": "string"
+      },
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "sku": {
+              "type": "string"
+            },
+            "manufacturer": {
+              "type": "string"
+            },
+            "unitPriceFormatted": {
+              "type": "string",
+              "pattern": "^\\$\\d+(?:\\.\\d{2})?$"
+            },
+            "quantity": {
+              "type": "number"
+            },
+            "subtotalFormatted": {
+              "type": "string",
+              "pattern": "^\\$\\d+(?:\\.\\d{2})?$"
+            }
+          },
+          "required": [
+            "id",
+            "description",
+            "sku",
+            "manufacturer",
+            "unitPriceFormatted",
+            "quantity",
+            "subtotalFormatted"
+          ],
+          "additionalProperties": false
+        },
+        "minItems": 2
+      },
+      "subtotalFormatted": {
+        "type": "string"
+      },
+      "discount": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "number"
+          },
+          "label": {
+            "type": "string"
+          },
+          "formatted": {
+            "type": "string",
+            "pattern": "^\\$\\d+(?:\\.\\d{2})?$"
+          }
+        },
+        "required": [
+          "amount",
+          "label",
+          "formatted"
+        ],
+        "additionalProperties": false
+      },
+      "tax": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "number"
+          },
+          "rateLabel": {
+            "type": "string"
+          },
+          "formatted": {
+            "type": "string",
+            "pattern": "^\\$\\d+(?:\\.\\d{2})?$"
+          }
+        },
+        "required": [
+          "amount",
+          "rateLabel",
+          "formatted"
+        ],
+        "additionalProperties": false
+      },
+      "grandTotalFormatted": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "brand",
+      "quoteId",
+      "items",
+      "subtotalFormatted",
+      "discount",
+      "tax",
+      "grandTotalFormatted"
+    ],
+    "additionalProperties": false
+  },
+  "outputJsonPreview": {
+    "type": "Card",
+    "size": "md",
+    "background": "surface-elevated",
+    "confirm": {
+      "label": "Send quote",
+      "action": {
+        "type": "quote.send",
+        "payload": {
+          "quoteId": "Q-10482",
+          "items": [
+            {
+              "id": "1",
+              "description": "Cisco ASA 5506-X Firewall Appliance",
+              "sku": "ASA5506-K9",
+              "manufacturer": "Cisco",
+              "unitPriceFormatted": "$620.00",
+              "quantity": 1,
+              "subtotalFormatted": "$620.00"
+            },
+            {
+              "id": "2",
+              "description": "Cat6 Shielded Ethernet Cable, 100ft",
+              "sku": "CAT6-STP-100",
+              "manufacturer": "Belden",
+              "unitPriceFormatted": "$310.00",
+              "quantity": 2,
+              "subtotalFormatted": "$620.00"
+            }
+          ],
+          "total": "$1,302.00"
+        }
+      }
+    },
+    "children": [
+      {
+        "type": "Row",
+        "align": "center",
+        "padding": {
+          "x": 4,
+          "y": 4
+        },
+        "gap": 3,
+        "background": "#ffffff",
+        "children": [
+          {
+            "type": "Image",
+            "src": "https://www.protect-ip.ca/medias/img/logo-protectip-en.png",
+            "alt": "Protect-IP",
+            "width": 160,
+            "height": 40,
+            "fit": "contain",
+            "radius": "none"
+          },
+          {
+            "type": "Spacer"
+          },
+          {
+            "type": "Badge",
+            "label": "Quote #Q-10482",
+            "color": "secondary",
+            "variant": "soft",
+            "size": "sm"
+          }
+        ]
+      },
+      {
+        "type": "Row",
+        "padding": {
+          "x": 4,
+          "y": 3
+        },
+        "background": "#111111",
+        "children": [
+          {
+            "type": "Col",
+            "children": [
+              {
+                "type": "Title",
+                "value": "Quote items",
+                "size": "md",
+                "color": "#ffffff"
+              },
+              {
+                "type": "Caption",
+                "value": "2 items",
+                "size": "sm",
+                "color": "#e5e5e5"
+              }
+            ]
+          },
+          {
+            "type": "Spacer"
+          },
+          {
+            "type": "Badge",
+            "label": "DRAFT",
+            "size": "sm",
+            "color": "danger",
+            "variant": "solid"
+          }
+        ]
+      },
+      {
+        "type": "ListView",
+        "children": [
+          {
+            "type": "ListViewItem",
+            "key": "1-0",
+            "gap": 0,
+            "children": [
+              {
+                "type": "Row",
+                "gap": 3,
+                "align": "stretch",
+                "padding": {
+                  "x": 4,
+                  "y": 3
+                },
+                "background": "#ffffff",
+                "border": {
+                  "bottom": {
+                    "size": 1,
+                    "color": "subtle"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "Col",
+                    "flex": 1,
+                    "gap": 1,
+                    "children": [
+                      {
+                        "type": "Text",
+                        "value": "Cisco ASA 5506-X Firewall Appliance",
+                        "size": "sm",
+                        "weight": "semibold",
+                        "maxLines": 2,
+                        "color": "emphasis"
+                      },
+                      {
+                        "type": "Caption",
+                        "value": "SKU: ASA5506-K9 · Cisco",
+                        "color": "secondary"
+                      },
+                      {
+                        "type": "Caption",
+                        "value": "Unit: $620.00",
+                        "color": "secondary"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Col",
+                    "minWidth": 120,
+                    "align": "end",
+                    "gap": 1,
+                    "children": [
+                      {
+                        "type": "Caption",
+                        "value": "Qty: 1",
+                        "color": "secondary"
+                      },
+                      {
+                        "type": "Text",
+                        "value": "$620.00",
+                        "size": "sm",
+                        "weight": "semibold"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "ListViewItem",
+            "key": "2-1",
+            "gap": 0,
+            "children": [
+              {
+                "type": "Row",
+                "gap": 3,
+                "align": "stretch",
+                "padding": {
+                  "x": 4,
+                  "y": 3
+                },
+                "background": "#ffffff",
+                "border": {
+                  "bottom": {
+                    "size": 1,
+                    "color": "subtle"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "Col",
+                    "flex": 1,
+                    "gap": 1,
+                    "children": [
+                      {
+                        "type": "Text",
+                        "value": "Cat6 Shielded Ethernet Cable, 100ft",
+                        "size": "sm",
+                        "weight": "semibold",
+                        "maxLines": 2,
+                        "color": "emphasis"
+                      },
+                      {
+                        "type": "Caption",
+                        "value": "SKU: CAT6-STP-100 · Belden",
+                        "color": "secondary"
+                      },
+                      {
+                        "type": "Caption",
+                        "value": "Unit: $310.00",
+                        "color": "secondary"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Col",
+                    "minWidth": 120,
+                    "align": "end",
+                    "gap": 1,
+                    "children": [
+                      {
+                        "type": "Caption",
+                        "value": "Qty: 2",
+                        "color": "secondary"
+                      },
+                      {
+                        "type": "Text",
+                        "value": "$620.00",
+                        "size": "sm",
+                        "weight": "semibold"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "Divider"
+      },
+      {
+        "type": "Row",
+        "padding": {
+          "x": 4,
+          "y": 3
+        },
+        "background": "#ffffff",
+        "children": [
+          {
+            "type": "Col"
+          },
+          {
+            "type": "Col",
+            "minWidth": 260,
+            "gap": 2,
+            "children": [
+              {
+                "type": "Row",
+                "children": [
+                  {
+                    "type": "Text",
+                    "value": "Subtotal",
+                    "color": "secondary"
+                  },
+                  {
+                    "type": "Spacer"
+                  },
+                  {
+                    "type": "Text",
+                    "value": "$1,240.00"
+                  }
+                ]
+              },
+              {
+                "type": "Row",
+                "children": [
+                  {
+                    "type": "Text",
+                    "value": "Tax (GST 5%)",
+                    "color": "secondary"
+                  },
+                  {
+                    "type": "Spacer"
+                  },
+                  {
+                    "type": "Text",
+                    "value": "$62.00"
+                  }
+                ]
+              },
+              {
+                "type": "Row",
+                "padding": {
+                  "x": 4,
+                  "y": 2
+                },
+                "background": "#111111",
+                "radius": "lg",
+                "children": [
+                  {
+                    "type": "Text",
+                    "value": "Total",
+                    "weight": "semibold",
+                    "color": "#ffffff"
+                  },
+                  {
+                    "type": "Spacer"
+                  },
+                  {
+                    "type": "Text",
+                    "value": "$1,302.00",
+                    "weight": "bold",
+                    "size": "md",
+                    "color": "#ffffff"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "encodedWidget": "eyJpZCI6ImNiZDJhZDlhLTQ5ZDUtNGY5ZC05ZGJiLTkxZjQzZWEzOTVkMSIsIm5hbWUiOiJQcm90ZWN0SVAgUXVvdGUiLCJ2aWV3IjoiPENhcmQgc2l6ZT1cIm1kXCIgYmFja2dyb3VuZD1cInN1cmZhY2UtZWxldmF0ZWRcIiBjb25maXJtPXt7IGxhYmVsOiBcIlNlbmQgcXVvdGVcIiwgYWN0aW9uOiB7IHR5cGU6IFwicXVvdGUuc2VuZFwiLCBwYXlsb2FkOiB7IHF1b3RlSWQsIGl0ZW1zLCB0b3RhbDogZ3JhbmRUb3RhbEZvcm1hdHRlZCB9IH0gfX0-XG4gIDxSb3cgYWxpZ249XCJjZW50ZXJcIiBwYWRkaW5nPXt7eDo0LCB5OjR9fSBnYXA9ezN9IGJhY2tncm91bmQ9XCIjZmZmZmZmXCI-XG4gICAgPEltYWdlIHNyYz17YnJhbmQubG9nb30gYWx0PXticmFuZC5uYW1lfSB3aWR0aD17MTYwfSBoZWlnaHQ9ezQwfSBmaXQ9XCJjb250YWluXCIgcmFkaXVzPVwibm9uZVwiIC8-XG4gICAgPFNwYWNlciAvPlxuICAgIDxCYWRnZSBsYWJlbD17YFF1b3RlICMke3F1b3RlSWR9YH0gY29sb3I9XCJzZWNvbmRhcnlcIiB2YXJpYW50PVwic29mdFwiIHNpemU9XCJzbVwiIC8-XG4gIDwvUm93PlxuXG4gIDxSb3cgcGFkZGluZz17e3g6NCwgeTozfX0gYmFja2dyb3VuZD1cIiMxMTExMTFcIj5cbiAgICA8Q29sPlxuICAgICAgPFRpdGxlIHZhbHVlPVwiUXVvdGUgaXRlbXNcIiBzaXplPVwibWRcIiBjb2xvcj1cIiNmZmZmZmZcIiAvPlxuICAgICAgPENhcHRpb24gdmFsdWU9e2Ake2l0ZW1zLmxlbmd0aH0gaXRlbXNgfSBzaXplPVwic21cIiBjb2xvcj1cIiNlNWU1ZTVcIiAvPlxuICAgIDwvQ29sPlxuICAgIDxTcGFjZXIgLz5cbiAgICA8QmFkZ2UgbGFiZWw9XCJEUkFGVFwiIHNpemU9XCJzbVwiIGNvbG9yPVwiZGFuZ2VyXCIgdmFyaWFudD1cInNvbGlkXCIgLz5cbiAgPC9Sb3c-XG5cbiAgPExpc3RWaWV3PlxuICAgIHtpdGVtcy5tYXAoKGl0ZW0sIGlkeCkgPT4gKFxuICAgICAgPExpc3RWaWV3SXRlbSBrZXk9e2Ake2l0ZW0uaWR9LSR7aWR4fWB9IGdhcD17MH0-XG4gICAgICAgIDxSb3cgZ2FwPXszfSBhbGlnbj1cInN0cmV0Y2hcIiBwYWRkaW5nPXt7eDo0LCB5OjN9fSBiYWNrZ3JvdW5kPVwiI2ZmZmZmZlwiIGJvcmRlcj17eyBib3R0b206IHsgc2l6ZTogMSwgY29sb3I6IFwic3VidGxlXCIgfSB9fT5cbiAgICAgICAgICA8Q29sIGZsZXg9ezF9IGdhcD17MX0-XG4gICAgICAgICAgICA8VGV4dCB2YWx1ZT17aXRlbS5kZXNjcmlwdGlvbn0gc2l6ZT1cInNtXCIgd2VpZ2h0PVwic2VtaWJvbGRcIiBtYXhMaW5lcz17Mn0gY29sb3I9XCJlbXBoYXNpc1wiIC8-XG4gICAgICAgICAgICA8Q2FwdGlvbiB2YWx1ZT17YFNLVTogJHtpdGVtLnNrdX0ke2l0ZW0ubWFudWZhY3R1cmVyID8gXCIgwrcgXCIgKyBpdGVtLm1hbnVmYWN0dXJlciA6IFwiXCJ9YH0gY29sb3I9XCJzZWNvbmRhcnlcIiAvPlxuICAgICAgICAgICAgPENhcHRpb24gdmFsdWU9e2BVbml0OiAke2l0ZW0udW5pdFByaWNlRm9ybWF0dGVkfWB9IGNvbG9yPVwic2Vjb25kYXJ5XCIgLz5cbiAgICAgICAgICA8L0NvbD5cbiAgICAgICAgICA8Q29sIG1pbldpZHRoPXsxMjB9IGFsaWduPVwiZW5kXCIgZ2FwPXsxfT5cbiAgICAgICAgICAgIDxDYXB0aW9uIHZhbHVlPXtgUXR5OiAke2l0ZW0ucXVhbnRpdHl9YH0gY29sb3I9XCJzZWNvbmRhcnlcIiAvPlxuICAgICAgICAgICAgPFRleHQgdmFsdWU9e2l0ZW0uc3VidG90YWxGb3JtYXR0ZWR9IHNpemU9XCJzbVwiIHdlaWdodD1cInNlbWlib2xkXCIgLz5cbiAgICAgICAgICA8L0NvbD5cbiAgICAgICAgPC9Sb3c-XG4gICAgICA8L0xpc3RWaWV3SXRlbT5cbiAgICApKX1cbiAgPC9MaXN0Vmlldz5cblxuICA8RGl2aWRlciAvPlxuXG4gIDxSb3cgcGFkZGluZz17e3g6NCwgeTozfX0gYmFja2dyb3VuZD1cIiNmZmZmZmZcIj5cbiAgICA8Q29sIC8-XG4gICAgPENvbCBtaW5XaWR0aD17MjYwfSBnYXA9ezJ9PlxuICAgICAgPFJvdz5cbiAgICAgICAgPFRleHQgdmFsdWU9XCJTdWJ0b3RhbFwiIGNvbG9yPVwic2Vjb25kYXJ5XCIgLz5cbiAgICAgICAgPFNwYWNlciAvPlxuICAgICAgICA8VGV4dCB2YWx1ZT17c3VidG90YWxGb3JtYXR0ZWR9IC8-XG4gICAgICA8L1Jvdz5cblxuICAgICAge2Rpc2NvdW50ICYmIGRpc2NvdW50LmFtb3VudCA-IDAgPyAoXG4gICAgICAgIDxSb3c-XG4gICAgICAgICAgPFRleHQgdmFsdWU9e2BEaXNjb3VudCR7ZGlzY291bnQubGFiZWwgPyBcIiAoXCIgKyBkaXNjb3VudC5sYWJlbCArIFwiKVwiIDogXCJcIn1gfSBjb2xvcj1cInNlY29uZGFyeVwiIC8-XG4gICAgICAgICAgPFNwYWNlciAvPlxuICAgICAgICAgIDxUZXh0IHZhbHVlPXtgLSAke2Rpc2NvdW50LmZvcm1hdHRlZH1gfSAvPlxuICAgICAgICA8L1Jvdz5cbiAgICAgICkgOiBudWxsfVxuXG4gICAgICB7dGF4ICYmIHRheC5hbW91bnQgPiAwID8gKFxuICAgICAgICA8Um93PlxuICAgICAgICAgIDxUZXh0IHZhbHVlPXtgVGF4JHt0YXgucmF0ZUxhYmVsID8gXCIgKFwiICsgdGF4LnJhdGVMYWJlbCArIFwiKVwiIDogXCJcIn1gfSBjb2xvcj1cInNlY29uZGFyeVwiIC8-XG4gICAgICAgICAgPFNwYWNlciAvPlxuICAgICAgICAgIDxUZXh0IHZhbHVlPXt0YXguZm9ybWF0dGVkfSAvPlxuICAgICAgICA8L1Jvdz5cbiAgICAgICkgOiBudWxsfVxuXG4gICAgICA8Um93IHBhZGRpbmc9e3sgeDogNCwgeTogMiB9fSBiYWNrZ3JvdW5kPVwiIzExMTExMVwiIHJhZGl1cz1cImxnXCI-XG4gICAgICAgIDxUZXh0IHZhbHVlPVwiVG90YWxcIiB3ZWlnaHQ9XCJzZW1pYm9sZFwiIGNvbG9yPVwiI2ZmZmZmZlwiIC8-XG4gICAgICAgIDxTcGFjZXIgLz5cbiAgICAgICAgPFRleHQgdmFsdWU9e2dyYW5kVG90YWxGb3JtYXR0ZWR9IHdlaWdodD1cImJvbGRcIiBzaXplPVwibWRcIiBjb2xvcj1cIiNmZmZmZmZcIiAvPlxuICAgICAgPC9Sb3c-XG4gICAgPC9Db2w-XG4gIDwvUm93PlxuPC9DYXJkPiIsImRlZmF1bHRTdGF0ZSI6eyJicmFuZCI6eyJuYW1lIjoiUHJvdGVjdC1JUCIsImxvZ28iOiJodHRwczovL3d3dy5wcm90ZWN0LWlwLmNhL21lZGlhcy9pbWcvbG9nby1wcm90ZWN0aXAtZW4ucG5nIn0sInF1b3RlSWQiOiJRLTEwNDgyIiwiaXRlbXMiOlt7ImlkIjoiMSIsImRlc2NyaXB0aW9uIjoiQ2lzY28gQVNBIDU1MDYtWCBGaXJld2FsbCBBcHBsaWFuY2UiLCJza3UiOiJBU0E1NTA2LUs5IiwibWFudWZhY3R1cmVyIjoiQ2lzY28iLCJ1bml0UHJpY2VGb3JtYXR0ZWQiOiIkNjIwLjAwIiwicXVhbnRpdHkiOjEsInN1YnRvdGFsRm9ybWF0dGVkIjoiJDYyMC4wMCJ9LHsiaWQiOiIyIiwiZGVzY3JpcHRpb24iOiJDYXQ2IFNoaWVsZGVkIEV0aGVybmV0IENhYmxlLCAxMDBmdCIsInNrdSI6IkNBVDYtU1RQLTEwMCIsIm1hbnVmYWN0dXJlciI6IkJlbGRlbiIsInVuaXRQcmljZUZvcm1hdHRlZCI6IiQzMTAuMDAiLCJxdWFudGl0eSI6Miwic3VidG90YWxGb3JtYXR0ZWQiOiIkNjIwLjAwIn1dLCJzdWJ0b3RhbEZvcm1hdHRlZCI6IiQxLDI0MC4wMCIsImRpc2NvdW50Ijp7ImFtb3VudCI6MCwibGFiZWwiOiIiLCJmb3JtYXR0ZWQiOiIkMC4wMCJ9LCJ0YXgiOnsiYW1vdW50Ijo2MiwicmF0ZUxhYmVsIjoiR1NUIDUlIiwiZm9ybWF0dGVkIjoiJDYyLjAwIn0sImdyYW5kVG90YWxGb3JtYXR0ZWQiOiIkMSwzMDIuMDAifSwic3RhdGVzIjpbXX0"
+}

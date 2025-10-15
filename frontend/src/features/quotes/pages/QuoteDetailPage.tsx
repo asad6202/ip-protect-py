@@ -19,6 +19,7 @@ import { useGetQuoteItemFeedback } from '../api-item-feedback'
 import { formatCurrency, formatDateTime } from '@/lib-utils/format'
 import ItemFeedbackDialog from '../components/ItemFeedbackDialog'
 import ItemFeedbackDisplay from '../components/ItemFeedbackDisplay'
+import QuoteWidget from '../components/QuoteWidget'
 
 const statusConfig = {
   draft: { color: 'bg-gray-100 text-gray-800', label: 'Draft' },
@@ -137,6 +138,11 @@ export default function QuoteDetailPage() {
           </div>
         }
       />
+
+      {/* Quote Widget */}
+      <QuoteWidget quote={quote} onSendQuote={() => {
+        console.log('Send quote clicked')
+      }} />
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Quote Details */}
