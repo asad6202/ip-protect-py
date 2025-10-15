@@ -5,10 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Save, RotateCcw } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
 import QuotePromptForm from '../components/QuotePromptForm'
-import QuoteFeedbackForm from '../components/QuoteFeedbackForm'
 import QuoteWidget from '../components/QuoteWidget'
 import { useCreateQuote } from '../api'
-import { useCreateItemFeedback } from '../api-item-feedback'
 import { QuoteItem, QuoteGenResponse } from '@/lib-utils/types'
 import { useToast } from '@/components/ui/use-toast'
 
@@ -16,24 +14,18 @@ export default function QuoteCreateFromPromptPage() {
   const navigate = useNavigate()
   const { toast } = useToast()
   const createQuote = useCreateQuote()
-  const createItemFeedback = useCreateItemFeedback()
 
   const [step, setStep] = useState<'prompt' | 'edit'>('prompt')
   const [generatedData, setGeneratedData] = useState<QuoteGenResponse | null>(null)
   const [items, setItems] = useState<QuoteItem[]>([])
   const [title, setTitle] = useState('')
   const [originalPrompt, setOriginalPrompt] = useState('')
-  const [feedback, setFeedback] = useState<any>(null)
 
   const handleGenerate = (prompt: string, response: QuoteGenResponse) => {
     setOriginalPrompt(prompt)
     setGeneratedData(response)
     setItems(response.items)
     setStep('edit')
-  }
-
-  const handleFeedback = (feedbackData: any) => {
-    setFeedback(feedbackData)
   }
 
   const handleSave = async () => {
@@ -47,74 +39,20 @@ export default function QuoteCreateFromPromptPage() {
     }
 
     try {
-      // Extract item-level feedback from items metadata
-      const itemFeedbackData = items
-        .filter(item => item.metadata?.item_feedback)
-        .map(item => ({
-          sku: item.metadata?.original_sku || item.sku, // Use original SKU for feedback mapping
-          feedback: item.metadata.item_feedback
-        }))
-
-      // Prepare feedback data for API
-      const feedbackRequest = feedback && feedback.product_feedback ? {
-        comment: feedback.product_feedback,
-        labels: {
-          product_feedback: feedback.product_feedback,
-          item_feedback_count: itemFeedbackData.length
-        }
-      } : undefined
-
       const quote = await createQuote.mutateAsync({
         title: title || undefined,
         prompt: originalPrompt,
         currency: generatedData?.currency || 'USD',
         items,
-        feedback: feedbackRequest,
       })
 
-      // Save item-level feedback after quote is created
-      if (itemFeedbackData.length > 0) {
-        try {
-          // Find the corresponding quote items by SKU and save feedback
-          for (const itemFeedback of itemFeedbackData) {
-            // Find quote item by original SKU (for replaced items) or current SKU (for non-replaced items)
-            const quoteItem = quote.items?.find(item => {
-              // If this item was replaced, check if the original SKU matches
-              if (item.metadata?.original_sku) {
-                return item.metadata.original_sku === itemFeedback.sku
-              }
-              // Otherwise, check the current SKU
-              return item.sku === itemFeedback.sku
-            })
-            
-            if (quoteItem?.id) {
-              await createItemFeedback.mutateAsync({
-                itemId: quoteItem.id,
-                data: itemFeedback.feedback
-              })
-            }
-          }
-          console.log('Item feedback saved successfully')
-        } catch (error) {
-          console.error('Failed to save item feedback:', error)
-          // Don't fail the entire quote creation if feedback saving fails
-        }
-      }
-
-      const feedbackCount = itemFeedbackData.length
-      const hasGeneralFeedback = feedback && feedback.product_feedback
-      
       toast({
         title: 'Quote created successfully',
-        description: feedbackCount > 0 || hasGeneralFeedback 
-          ? `Your quote has been saved with ${feedbackCount > 0 ? `${feedbackCount} item feedback${feedbackCount > 1 ? 's' : ''}` : ''}${feedbackCount > 0 && hasGeneralFeedback ? ' and ' : ''}${hasGeneralFeedback ? 'general feedback' : ''}.`
-          : 'Your quote has been saved.',
+        description: 'Your quote has been saved. Use the chat to make modifications.',
       })
 
-      // Small delay to ensure cache invalidation completes
-      setTimeout(() => {
-        navigate(`/quotes/${quote.id}`)
-      }, 100)
+      // Navigate to quote detail page where user can use chat to modify
+      navigate(`/quotes/${quote.id}`)
     } catch (error) {
       toast({
         title: 'Error creating quote',
@@ -130,7 +68,6 @@ export default function QuoteCreateFromPromptPage() {
     setItems([])
     setTitle('')
     setOriginalPrompt('')
-    setFeedback(null)
   }
 
   return (
@@ -165,51 +102,54 @@ export default function QuoteCreateFromPromptPage() {
       )}
 
       {step === 'edit' && generatedData && (
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Quote Title Field */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Quote Title</CardTitle>
-                <CardDescription>
-                  Set a title for this quote (optional)
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Enter quote title (optional)"
-                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
-                />
-              </CardContent>
-            </Card>
-
-            {/* Quote Widget */}
-            <QuoteWidget
-              quote={{
-                id: 'new-quote',
-                prompt: originalPrompt,
-                currency: generatedData.currency,
-                total_amount: items.reduce((sum, item) => sum + (item.subtotal || 0), 0),
-                status: 'draft',
-                items: items,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              }}
-            />
-          </div>
-
-          {/* Right Sidebar - Sticky Feedback */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-6">
-              <QuoteFeedbackForm
-                onFeedback={handleFeedback}
+        <div className="space-y-6 max-w-5xl mx-auto">
+          {/* Quote Title Field */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Quote Title</CardTitle>
+              <CardDescription>
+                Set a title for this quote (optional). After saving, you can use the AI chat to modify items.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Enter quote title (optional)"
+                className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
               />
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+
+          {/* Quote Widget */}
+          <QuoteWidget
+            quote={{
+              id: 'new-quote',
+              prompt: originalPrompt,
+              currency: generatedData.currency,
+              total_amount: items.reduce((sum, item) => sum + (item.subtotal || 0), 0),
+              status: 'draft',
+              items: items,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            }}
+          />
+          
+          <Card className="bg-blue-50 border-blue-200">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-3">
+                <div className="text-blue-600 text-2xl">💬</div>
+                <div>
+                  <h3 className="font-semibold text-blue-900 mb-1">Need to make changes?</h3>
+                  <p className="text-sm text-blue-700">
+                    Save this quote and use the AI-powered chat interface to add, remove, or modify items. 
+                    You can even attach images or documents for better context!
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>
