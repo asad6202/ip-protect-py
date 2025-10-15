@@ -9,6 +9,7 @@ from typing import Dict, List, Optional, Any
 from uuid import uuid4
 
 from app.ai.intent_extractor import extract_intent
+from app.ai.agent_workflow import get_agent_workflow
 from app.services.retrieval import ProductRetrieval
 from app.services.rule_engine import RuleEngine
 from app.services.item_feedback_analyzer import ItemFeedbackAnalyzer
@@ -27,8 +28,23 @@ class QuoteService:
     async def generate_quote_data(self, prompt: str):
         """Generate quote data from prompt without saving to database."""
         try:
-            # Extract intent from the prompt
-            intent = extract_intent(prompt)
+            # Use agent workflow for intent extraction with guardrails
+            agent_workflow = get_agent_workflow()
+            workflow_result = await agent_workflow.process_quote_request(prompt)
+            
+            # Check if guardrails blocked the request
+            if workflow_result.get("status") == "blocked":
+                raise ValueError(f"Request blocked by safety guardrails: {workflow_result.get('issues', {})}")
+            
+            # Check if the intent is a quote request
+            intent_type = workflow_result.get("intent", {}).get("intent", "quote_request")
+            if intent_type != "quote_request":
+                raise ValueError(f"This appears to be a {intent_type}, not a quote request")
+            
+            # Extract intent from agent workflow response
+            quote_data = workflow_result.get("quote_data", {})
+            intent = quote_data if quote_data else extract_intent(prompt)  # Fallback to old method
+            
             if not intent or 'items' not in intent:
                 raise ValueError("Could not extract product requirements from prompt")
             

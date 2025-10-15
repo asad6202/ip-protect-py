@@ -65,7 +65,8 @@ class AgentWorkflow:
                 temperature=0.0
             )
             
-            has_pii = pii_check_response.choices[0].message.content.strip().lower() == 'true'
+            pii_content = pii_check_response.choices[0].message.content
+            has_pii = pii_content.strip().lower() == 'true' if pii_content else False
             
             if has_pii:
                 safe = False
@@ -122,7 +123,10 @@ If unsure, choose "quote_request"."""
                 temperature=0.0
             )
             
-            result = json.loads(response.choices[0].message.content)
+            content = response.choices[0].message.content
+            if not content:
+                return {"intent": "quote_request", "normalized": {}}
+            result = json.loads(content)
             return result
             
         except Exception as e:
@@ -185,7 +189,10 @@ Return ONLY valid JSON."""
                 temperature=0.3
             )
             
-            result = json.loads(response.choices[0].message.content)
+            content = response.choices[0].message.content
+            if not content:
+                raise Exception("Empty response from OpenAI")
+            result = json.loads(content)
             return result
             
         except Exception as e:
