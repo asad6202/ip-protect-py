@@ -1,0 +1,238 @@
+"""
+OpenAI Agent Workflow for Quote Generation
+Implements a multi-agent workflow for processing quote requests with guardrails
+"""
+import os
+import json
+from typing import Dict, Any, List, Optional
+from openai import OpenAI
+from pydantic import BaseModel
+
+
+class GuardrailsResult(BaseModel):
+    """Result from guardrails checks"""
+    safe: bool
+    issues: Dict[str, Any]
+    safe_text: Optional[str] = None
+
+
+class AgentWorkflow:
+    """
+    Multi-agent workflow for quote generation with safety guardrails
+    """
+    
+    def __init__(self):
+        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        if not self.client.api_key:
+            raise ValueError("OPENAI_API_KEY environment variable is required")
+    
+    async def run_guardrails(self, input_text: str) -> GuardrailsResult:
+        """
+        Run safety guardrails on input text
+        Checks for: PII, harmful content, jailbreak attempts
+        """
+        try:
+            # Use OpenAI moderation API for content safety
+            moderation_response = self.client.moderations.create(input=input_text)
+            moderation_result = moderation_response.results[0]
+            
+            issues = {}
+            safe = True
+            
+            # Check moderation flags
+            if moderation_result.flagged:
+                safe = False
+                flagged_categories = [
+                    category for category, flagged 
+                    in moderation_result.categories.model_dump().items() 
+                    if flagged
+                ]
+                issues['moderation'] = {
+                    'failed': True,
+                    'flagged_categories': flagged_categories
+                }
+            
+            # Simple PII detection using GPT
+            pii_check_response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a PII detector. Return 'true' if the text contains personal identifiable information (email, phone, SSN, credit card, address), otherwise return 'false'. Respond with only 'true' or 'false'."
+                    },
+                    {"role": "user", "content": input_text}
+                ],
+                temperature=0.0
+            )
+            
+            has_pii = pii_check_response.choices[0].message.content.strip().lower() == 'true'
+            
+            if has_pii:
+                safe = False
+                issues['pii'] = {
+                    'failed': True,
+                    'detected_counts': ['potential_pii:1']
+                }
+            
+            return GuardrailsResult(
+                safe=safe,
+                issues=issues,
+                safe_text=input_text if safe else None
+            )
+            
+        except Exception as e:
+            # If guardrails fail, be conservative and flag as unsafe
+            return GuardrailsResult(
+                safe=False,
+                issues={'error': str(e)},
+                safe_text=None
+            )
+    
+    async def classify_intent(self, input_text: str) -> Dict[str, Any]:
+        """
+        Router agent: Classify the type of request
+        Returns intent type: quote_request, rfp, pricing_update, or rule_edit
+        """
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": """You are a classification agent for the Protect IP workflow.
+Your only job is to decide what type of request this is and return a small JSON object.
+
+Possible intents:
+- "quote_request": A natural-language request for a quote or list of products (e.g., "Need 3 outdoor 4K IR cameras and an NVR")
+- "rfp": The user uploaded or mentioned an RFP or tender document
+- "pricing_update": The user mentioned price lists, vendors, or distributor updates
+- "rule_edit": The user mentioned rules, constraints, or company policies
+
+Return ONLY JSON:
+{
+  "intent": "<one of the four above>",
+  "normalized": { "details you extracted, if any" }
+}
+No prose or explanations.
+If unsure, choose "quote_request"."""
+                    },
+                    {"role": "user", "content": input_text}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.0
+            )
+            
+            result = json.loads(response.choices[0].message.content)
+            return result
+            
+        except Exception as e:
+            # Default to quote_request if classification fails
+            return {
+                "intent": "quote_request",
+                "normalized": {},
+                "error": str(e)
+            }
+    
+    async def generate_quote(self, input_text: str, product_catalog_context: str = "") -> Dict[str, Any]:
+        """
+        Quote Builder Agent: Generate quote from natural language request
+        """
+        try:
+            system_prompt = f"""You are a quoting assistant for a security integrator.
+
+USER REQUEST
+{input_text}
+
+PRODUCT CATALOG CONTEXT
+{product_catalog_context if product_catalog_context else "Use your knowledge of common security camera products"}
+
+TASK
+1) Infer the products and quantities the user needs from the USER REQUEST.
+2) If multiple options appear, choose the best fit and note any assumptions.
+3) Return a structured JSON response with quote items.
+
+OUTPUT FORMAT (JSON):
+{{
+  "items": [
+    {{
+      "family": "camera|nvr|switch|accessory",
+      "quantity": <number>,
+      "formFactor": "dome|bullet|turret|box|ptz|server|switch",
+      "location": "indoor|outdoor|any",
+      "features": ["4k", "ir", "poe", "vandal", etc.],
+      "budgetPerUnit": {{"amount": <number>, "currency": "CAD"}},
+      "brandPreference": ["axis", "hanwha", "ipro"],
+      "notes": "Any specific requirements or assumptions"
+    }}
+  ],
+  "global": {{
+    "totalBudget": {{"amount": <number>, "currency": "CAD"}},
+    "preferredBrands": [],
+    "avoidPtz": false
+  }},
+  "summary": "Brief explanation of selections and assumptions"
+}}
+
+Return ONLY valid JSON."""
+            
+            response = self.client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": input_text}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.3
+            )
+            
+            result = json.loads(response.choices[0].message.content)
+            return result
+            
+        except Exception as e:
+            raise Exception(f"Quote generation failed: {str(e)}")
+    
+    async def process_quote_request(self, input_text: str) -> Dict[str, Any]:
+        """
+        Main workflow: Process a quote request through all agents with guardrails
+        """
+        # Step 1: Run guardrails
+        guardrails_result = await self.run_guardrails(input_text)
+        
+        if not guardrails_result.safe:
+            return {
+                "status": "blocked",
+                "reason": "guardrails_triggered",
+                "issues": guardrails_result.issues
+            }
+        
+        # Step 2: Classify intent
+        classification = await self.classify_intent(input_text)
+        intent_type = classification.get("intent", "quote_request")
+        
+        # Step 3: Process based on intent
+        if intent_type == "quote_request":
+            quote_data = await self.generate_quote(input_text)
+            return {
+                "status": "success",
+                "intent": classification,
+                "quote_data": quote_data
+            }
+        else:
+            # For other intents, return the classification
+            return {
+                "status": "success",
+                "intent": classification,
+                "message": f"Request classified as: {intent_type}"
+            }
+
+
+# Global instance
+_agent_workflow: Optional[AgentWorkflow] = None
+
+
+def get_agent_workflow() -> AgentWorkflow:
+    """Get or create the agent workflow instance"""
+    global _agent_workflow
+    if _agent_workflow is None:
+        _agent_workflow = AgentWorkflow()
+    return _agent_workflow

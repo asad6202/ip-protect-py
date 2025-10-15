@@ -1,0 +1,268 @@
+import { OpenAI } from "openai";
+import { runGuardrails } from "@openai/guardrails";
+import { z } from "zod";
+import { Agent, RunContext, AgentInputItem, Runner } from "@openai/agents";
+
+
+// Shared client for guardrails and file search
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// Guardrails definitions
+const guardrailsConfig = {
+  guardrails: []
+};
+const context = { guardrailLlm: client };
+
+// Guardrails utils
+function guardrailsHasTripwire(results) {
+    return (results ?? []).some((r) => r?.tripwireTriggered === true);
+}
+
+function getGuardrailSafeText(results, fallbackText) {
+    // Prefer checked_text as the generic safe/processed text
+    for (const r of results ?? []) {
+        if (r?.info && ("checked_text" in r.info)) {
+            return r.info.checked_text ?? fallbackText;
+        }
+    }
+    // Fall back to PII-specific anonymized_text if present
+    const pii = (results ?? []).find((r) => r?.info && "anonymized_text" in r.info);
+    return pii?.info?.anonymized_text ?? fallbackText;
+}
+
+function buildGuardrailFailOutput(results) {
+    const get = (name) => (results ?? []).find((r) => {
+          const info = r?.info ?? {};
+          const n = (info?.guardrail_name ?? info?.guardrailName);
+          return n === name;
+        }),
+          pii = get("Contains PII"),
+          mod = get("Moderation"),
+          jb = get("Jailbreak"),
+          hal = get("Hallucination Detection"),
+          piiCounts = Object.entries(pii?.info?.detected_entities ?? {})
+              .filter(([, v]) => Array.isArray(v))
+              .map(([k, v]) => k + ":" + v.length),
+          thr = jb?.info?.threshold,
+          conf = jb?.info?.confidence;
+
+    return {
+        pii: {
+            failed: (piiCounts.length > 0) || pii?.tripwireTriggered === true,
+            ...(piiCounts.length ? { detected_counts: piiCounts } : {}),
+            ...(pii?.executionFailed && pii?.info?.error ? { error: pii.info.error } : {}),
+        },
+        moderation: {
+            failed: mod?.tripwireTriggered === true || ((mod?.info?.flagged_categories ?? []).length > 0),
+            ...(mod?.info?.flagged_categories ? { flagged_categories: mod.info.flagged_categories } : {}),
+            ...(mod?.executionFailed && mod?.info?.error ? { error: mod.info.error } : {}),
+        },
+        jailbreak: {
+            // Rely on runtime-provided tripwire; don't recompute thresholds
+            failed: jb?.tripwireTriggered === true,
+            ...(jb?.executionFailed && jb?.info?.error ? { error: jb.info.error } : {}),
+        },
+        hallucination: {
+            // Rely on runtime-provided tripwire; don't recompute
+            failed: hal?.tripwireTriggered === true,
+            ...(hal?.info?.reasoning ? { reasoning: hal.info.reasoning } : {}),
+            ...(hal?.info?.hallucination_type ? { hallucination_type: hal.info.hallucination_type } : {}),
+            ...(hal?.info?.hallucinated_statements ? { hallucinated_statements: hal.info.hallucinated_statements } : {}),
+            ...(hal?.info?.verified_statements ? { verified_statements: hal.info.verified_statements } : {}),
+            ...(hal?.executionFailed && hal?.info?.error ? { error: hal.info.error } : {}),
+        },
+    };
+}
+const RouterSchema = z.object({ intent: z.string(), normalized: z.object({}) });
+const QuoteWidgetOutputSchema = z.object({});
+const router = new Agent({
+  name: "Router",
+  instructions: `You are a classification agent for the Protect IP workflow.
+Your only job is to decide what type of request this is and return a small JSON object.
+
+Possible intents:
+- \"quote_request\": A natural-language request for a quote or list of products (e.g., “Need 3 outdoor 4K IR cameras and an NVR”)
+- \"rfp\": The user uploaded or mentioned an RFP or tender document
+- \"pricing_update\": The user mentioned price lists, vendors, or distributor updates
+- \"rule_edit\": The user mentioned rules, constraints, or company policies
+
+Return ONLY JSON:
+{
+  \"intent\": \"<one of the four above>\",
+  \"normalized\": { \"details you extracted, if any\" }
+}
+No prose or explanations.
+If unsure, choose \"quote_request\".`,
+  model: "gpt-5",
+  outputType: RouterSchema,
+  modelSettings: {
+    reasoning: {
+      effort: "low",
+      summary: "auto"
+    },
+    store: true
+  }
+});
+
+interface QuoteBuilderAgentContext {
+  workflowInputAsText: string;
+}
+const quoteBuilderAgentInstructions = (runContext: RunContext<QuoteBuilderAgentContext>, _agent: Agent<QuoteBuilderAgentContext>) => {
+  const { workflowInputAsText } = runContext.context;
+  return `You are a quoting assistant for a security integrator.
+
+USER REQUEST
+${workflowInputAsText}
+
+SEARCH RESULTS (treat as context, not gospel)
+{{file_search.results}}
+
+TASK
+1) Infer the products and quantities the user needs from the USER REQUEST and any attached documents summarized in SEARCH RESULTS.
+2) If multiple options appear, choose the best fit and note any assumptions.
+3) Produce a short, human-readable reply followed by a compact Markdown table.
+
+OUTPUT (Markdown)
+Quote Summary:
+- One short paragraph that explains what you selected and why.
+
+Quote Table:
+| Qty | Product | SKU/Model | Key Specs | Notes |
+| --- | ------- | --------- | --------- | ----- |
+
+Rules:
+- If SEARCH RESULTS don’t contain clear SKUs/specs, still propose sensible generic items (e.g., “Outdoor 4K IR Dome”) and mark SKUs as “TBD”.
+- Ask up to 2 crisp clarifying questions only if truly needed.
+- Keep it concise. No JSON in your final answer.
+`
+}
+const quoteBuilderAgent = new Agent({
+  name: "Quote Builder Agent",
+  instructions: quoteBuilderAgentInstructions,
+  model: "gpt-5",
+  modelSettings: {
+    reasoning: {
+      effort: "low",
+      summary: "auto"
+    },
+    store: true
+  }
+});
+
+const webSearch = new Agent({
+  name: "Web Search",
+  instructions: "",
+  model: "gpt-5",
+  modelSettings: {
+    reasoning: {
+      effort: "low",
+      summary: "auto"
+    },
+    store: true
+  }
+});
+
+const supplierApi = new Agent({
+  name: "Supplier API",
+  instructions: "",
+  model: "gpt-5",
+  modelSettings: {
+    reasoning: {
+      effort: "low",
+      summary: "auto"
+    },
+    store: true
+  }
+});
+
+const quoteWidgetOutput = new Agent({
+  name: "Quote Widget Output",
+  instructions: "",
+  model: "gpt-5",
+  outputType: QuoteWidgetOutputSchema,
+  modelSettings: {
+    reasoning: {
+      effort: "low",
+      summary: "auto"
+    },
+    store: true
+  }
+});
+
+type WorkflowInput = { input_as_text: string };
+
+
+// Main code entrypoint
+export const runWorkflow = async (workflow: WorkflowInput) => {
+  const state = {
+    router_output: "router_output",
+    router_output_json: {
+      router_output: {
+
+      }
+    }
+  };
+  const conversationHistory: AgentInputItem[] = [
+    {
+      role: "user",
+      content: [
+        {
+          type: "input_text",
+          text: workflow.input_as_text
+        }
+      ]
+    }
+  ];
+  const runner = new Runner({
+    traceMetadata: {
+      __trace_source__: "agent-builder",
+      workflow_id: "wf_68e583ca7e688190a1763c3598e26b3c08dffb120cee44b5"
+    }
+  });
+  const routerResultTemp = await runner.run(
+    router,
+    [
+      ...conversationHistory
+    ]
+  );
+  conversationHistory.push(...routerResultTemp.newItems.map((item) => item.rawItem));
+
+  if (!routerResultTemp.finalOutput) {
+      throw new Error("Agent result is undefined");
+  }
+
+  const routerResult = {
+    output_text: JSON.stringify(routerResultTemp.finalOutput),
+    output_parsed: routerResultTemp.finalOutput
+  };
+  state.router_output_json = routerResult.output_parsed;
+  const guardrailsInputtext = workflow.input_as_text;
+  const guardrailsResult = await runGuardrails(guardrailsInputtext, guardrailsConfig, context);
+  const guardrailsHastripwire = guardrailsHasTripwire(guardrailsResult);
+  const guardrailsAnonymizedtext = getGuardrailSafeText(guardrailsResult, guardrailsInputtext);
+  const guardrailsOutput = (guardrailsHastripwire ? buildGuardrailFailOutput(guardrailsResult ?? []) : { safe_text: (guardrailsAnonymizedtext ?? guardrailsInputtext) });
+  if (guardrailsHastripwire) {
+    return guardrailsOutput;
+  } else {
+    const quoteBuilderAgentResultTemp = await runner.run(
+      quoteBuilderAgent,
+      [
+        ...conversationHistory
+      ],
+      {
+        context: {
+          workflowInputAsText: workflow.input_as_text
+        }
+      }
+    );
+    conversationHistory.push(...quoteBuilderAgentResultTemp.newItems.map((item) => item.rawItem));
+
+    if (!quoteBuilderAgentResultTemp.finalOutput) {
+        throw new Error("Agent result is undefined");
+    }
+
+    const quoteBuilderAgentResult = {
+      output_text: quoteBuilderAgentResultTemp.finalOutput ?? ""
+    };
+  }
+}
