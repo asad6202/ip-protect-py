@@ -160,7 +160,12 @@ CRITICAL INSTRUCTIONS
 3) Calculate quantities intelligently:
    - NVR channels: At least equal to camera count (round up to common sizes: 4, 8, 16, 32)
    - Switch ports: At least equal to camera count + 1 for uplink (round up to common sizes: 8, 16, 24, 48)
-4) For each item, specify detailed requirements
+4) For each item, specify detailed requirements using DATABASE-FRIENDLY TERMS:
+   - Resolution: Use "2mp", "4mp", "5mp", "8mp" instead of "4k" or "1080p"
+   - IR/Night Vision: Use "ir" (the system will expand this)
+   - Vandal Resistance: Use "vandal", "ik10" 
+   - PoE: Use "poe" or "poe+"
+   - Video Codec: Use "h.265" or "h.264"
 
 OUTPUT FORMAT (JSON):
 {{
@@ -170,7 +175,7 @@ OUTPUT FORMAT (JSON):
       "quantity": <number>,
       "formFactor": "dome|bullet|turret|box|ptz|server|switch",
       "location": "indoor|outdoor|any",
-      "features": ["4k", "ir", "poe", "vandal", "h265", etc.],
+      "features": ["5mp", "ir", "poe", "vandal", "h.265", etc.],
       "budgetPerUnit": {{"amount": <number>, "currency": "CAD"}},
       "brandPreference": ["axis", "hanwha", "ipro"],
       "notes": "Specific requirements or assumptions"
@@ -185,7 +190,7 @@ OUTPUT FORMAT (JSON):
 }}
 
 EXAMPLE: If user says "Need 4 outdoor cameras"
-Return items for: 4x outdoor cameras, 1x 8-channel NVR, 1x 8-port PoE switch, 4x patch cables
+Return items for: 4x outdoor cameras (5mp, ir, poe, outdoor, bullet), 1x 8-channel NVR, 1x 8-port PoE switch, 4x patch cables
 
 Return ONLY valid JSON."""
             
