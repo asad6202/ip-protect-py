@@ -50,6 +50,24 @@ export default function QuoteWidget({ quote, onSendQuote }: QuoteWidgetProps) {
         </div>
       </div>
 
+      {/* Quote Summary Section */}
+      {quote.prompt && (
+        <div className="px-6 py-4 bg-gray-50 border-b">
+          <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Quote Request</h4>
+          <p className="text-sm text-gray-900">{quote.prompt}</p>
+          {quote.total_amount && (
+            <div className="mt-3 flex items-center gap-4">
+              <div>
+                <span className="text-xs text-gray-500">Estimated Value: </span>
+                <span className="text-sm font-semibold text-gray-900">
+                  {formatCurrency(quote.total_amount, currency)}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Quote Items Header */}
       <div className="flex items-center justify-between px-6 py-3 bg-[#111111] text-white">
         <div>
