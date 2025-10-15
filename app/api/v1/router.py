@@ -3,7 +3,7 @@ API v1 router configuration.
 """
 
 from fastapi import APIRouter
-from app.api.v1.endpoints import quote, product, upload, dashboard, rule, nlp_rules, item_feedback
+from app.api.v1.endpoints import quote, product, upload, dashboard, rule, nlp_rules, item_feedback, chat
 
 api_router = APIRouter()
 
@@ -27,3 +27,6 @@ api_router.include_router(nlp_rules.router, tags=["nlp-rules"])
 
 # Include item feedback endpoints
 api_router.include_router(item_feedback.router, tags=["item-feedback"])
+
+# Include chat endpoints
+api_router.include_router(chat.router, tags=["chat"])
