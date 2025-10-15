@@ -142,7 +142,7 @@ If unsure, choose "quote_request"."""
         Quote Builder Agent: Generate quote from natural language request
         """
         try:
-            system_prompt = f"""You are a quoting assistant for a security integrator.
+            system_prompt = f"""You are an expert quoting assistant for a CCTV security integrator.
 
 USER REQUEST
 {input_text}
@@ -150,10 +150,17 @@ USER REQUEST
 PRODUCT CATALOG CONTEXT
 {product_catalog_context if product_catalog_context else "Use your knowledge of common security camera products"}
 
-TASK
-1) Infer the products and quantities the user needs from the USER REQUEST.
-2) If multiple options appear, choose the best fit and note any assumptions.
-3) Return a structured JSON response with quote items.
+CRITICAL INSTRUCTIONS
+1) Parse the USER REQUEST and extract product requirements (tolerate typos like "outdor" = "outdoor")
+2) ALWAYS include ALL necessary installation components for a complete system:
+   - Cameras (as requested)
+   - NVR (Network Video Recorder) - 1 unit to record all cameras (ensure sufficient channels)
+   - PoE Switch - 1 unit to power all cameras (ensure sufficient ports)
+   - Cables/Accessories - patch cables, mounting hardware, power supplies if needed
+3) Calculate quantities intelligently:
+   - NVR channels: At least equal to camera count (round up to common sizes: 4, 8, 16, 32)
+   - Switch ports: At least equal to camera count + 1 for uplink (round up to common sizes: 8, 16, 24, 48)
+4) For each item, specify detailed requirements
 
 OUTPUT FORMAT (JSON):
 {{
@@ -163,10 +170,10 @@ OUTPUT FORMAT (JSON):
       "quantity": <number>,
       "formFactor": "dome|bullet|turret|box|ptz|server|switch",
       "location": "indoor|outdoor|any",
-      "features": ["4k", "ir", "poe", "vandal", etc.],
+      "features": ["4k", "ir", "poe", "vandal", "h265", etc.],
       "budgetPerUnit": {{"amount": <number>, "currency": "CAD"}},
       "brandPreference": ["axis", "hanwha", "ipro"],
-      "notes": "Any specific requirements or assumptions"
+      "notes": "Specific requirements or assumptions"
     }}
   ],
   "global": {{
@@ -174,8 +181,11 @@ OUTPUT FORMAT (JSON):
     "preferredBrands": [],
     "avoidPtz": false
   }},
-  "summary": "Brief explanation of selections and assumptions"
+  "summary": "Brief explanation of complete system and assumptions"
 }}
+
+EXAMPLE: If user says "Need 4 outdoor cameras"
+Return items for: 4x outdoor cameras, 1x 8-channel NVR, 1x 8-port PoE switch, 4x patch cables
 
 Return ONLY valid JSON."""
             
