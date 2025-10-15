@@ -32,7 +32,12 @@ Preferred communication style: Simple, everyday language.
 - **Modular Feature Architecture**: Organized by business domains (quotes, products, brands, etc.)
 
 ## AI and Search Strategy
-- **Intent Extraction**: GPT-powered parsing of natural language requirements into structured search criteria
+- **OpenAI Agent Workflow**: Multi-agent system for intelligent quote generation with safety guardrails
+  - Router Agent: Classifies incoming requests (quote_request, rfp, pricing_update, rule_edit)
+  - Quote Builder Agent: Generates structured quote data from natural language
+  - Guardrails System: PII detection, content moderation, and jailbreak prevention
+  - Uses OPENAI_API_KEY from environment secrets for secure API access
+- **Intent Extraction**: GPT-4o-powered parsing of natural language requirements into structured search criteria
 - **Hybrid Search**: Deterministic keyword matching with optional vector similarity fallback
 - **Product Matching**: Family-aware search (camera/NVR/switch) with feature normalization
 - **Fallback Handling**: Placeholder items when products aren't found, maintaining quote structure
