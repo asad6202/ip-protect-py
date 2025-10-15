@@ -7,6 +7,7 @@ import PageHeader from '@/components/common/PageHeader'
 import QuotePromptForm from '../components/QuotePromptForm'
 import QuoteItemsEditor from '../components/QuoteItemsEditor'
 import QuoteFeedbackForm from '../components/QuoteFeedbackForm'
+import QuoteWidget from '../components/QuoteWidget'
 import { useCreateQuote } from '../api'
 import { useCreateItemFeedback } from '../api-item-feedback'
 import { QuoteItem, QuoteGenResponse } from '@/lib-utils/types'
@@ -181,49 +182,38 @@ export default function QuoteCreateFromPromptPage() {
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Quote Details with Total */}
+            {/* Quote Title Field */}
             <Card>
               <CardHeader>
-                <CardTitle>Quote Details</CardTitle>
+                <CardTitle>Quote Title</CardTitle>
                 <CardDescription>
-                  Set a title for this quote
+                  Set a title for this quote (optional)
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-1 block">Quote Title</label>
-                  <input
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Enter quote title (optional)"
-                    className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-1 block">Original Prompt</label>
-                  <div className="text-sm p-3 bg-muted rounded-md border">
-                    {originalPrompt}
-                  </div>
-                </div>
-                <div className="pt-2 border-t">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Total</label>
-                      <p className="text-2xl font-bold">
-                        {formatCurrency(items.reduce((sum, item) => sum + (item.subtotal || 0), 0), generatedData.currency)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <label className="text-sm font-medium text-muted-foreground">Items</label>
-                      <p className="text-lg font-semibold">
-                        {items.length} item{items.length !== 1 ? 's' : ''}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+              <CardContent>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Enter quote title (optional)"
+                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
+                />
               </CardContent>
             </Card>
+
+            {/* Quote Widget */}
+            <QuoteWidget
+              quote={{
+                id: 'new-quote',
+                prompt: originalPrompt,
+                currency: generatedData.currency,
+                total_amount: items.reduce((sum, item) => sum + (item.subtotal || 0), 0),
+                status: 'draft',
+                items: items,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              }}
+            />
 
             {/* Items Editor */}
             <QuoteItemsEditor
