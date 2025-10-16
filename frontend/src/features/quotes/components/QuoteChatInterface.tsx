@@ -70,12 +70,21 @@ export default function QuoteChatInterface({ quoteId, onQuoteUpdated }: QuoteCha
     }
 
     setChatHistory(prev => [...prev, userMessage])
+    const currentMessage = message
     setMessage('')
+    
+    // Add loading message
+    const loadingMessage: ChatMessage = {
+      role: 'assistant',
+      content: '...',
+      timestamp: new Date().toISOString()
+    }
+    setChatHistory(prev => [...prev, loadingMessage])
     
     try {
       const formData = new FormData()
       formData.append('quote_id', quoteId)
-      formData.append('message', message)
+      formData.append('message', currentMessage)
       formData.append('chat_history', JSON.stringify(chatHistory))
       
       attachments.forEach(file => {
@@ -84,26 +93,31 @@ export default function QuoteChatInterface({ quoteId, onQuoteUpdated }: QuoteCha
 
       const response = await modifyQuote.mutateAsync(formData)
       
-      const assistantMessage: ChatMessage = {
-        role: 'assistant',
-        content: response.message,
-        timestamp: new Date().toISOString()
-      }
-
-      setChatHistory(prev => [...prev, assistantMessage])
+      // Remove loading message and add actual response
+      setChatHistory(prev => {
+        const withoutLoading = prev.slice(0, -1)
+        return [...withoutLoading, {
+          role: 'assistant',
+          content: response.message,
+          timestamp: new Date().toISOString()
+        }]
+      })
       setAttachments([])
       
       if (response.updated_items || response.modifications) {
         onQuoteUpdated?.()
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Chat error:', error)
-      const errorMessage: ChatMessage = {
-        role: 'assistant',
-        content: 'Sorry, I encountered an error processing your request. Please try again.',
-        timestamp: new Date().toISOString()
-      }
-      setChatHistory(prev => [...prev, errorMessage])
+      // Remove loading message and add error message
+      setChatHistory(prev => {
+        const withoutLoading = prev.slice(0, -1)
+        return [...withoutLoading, {
+          role: 'assistant',
+          content: `Sorry, I encountered an error: ${error.message || 'Please try again.'}`,
+          timestamp: new Date().toISOString()
+        }]
+      })
     }
   }
 
