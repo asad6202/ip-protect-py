@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Save, RotateCcw } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
 import QuotePromptForm from '../components/QuotePromptForm'
 import QuoteWidget from '../components/QuoteWidget'
+import QuoteChatInterface from '../components/QuoteChatInterface'
 import { useCreateQuote } from '../api'
 import { QuoteItem, QuoteGenResponse } from '@/lib-utils/types'
 import { useToast } from '@/components/ui/use-toast'
@@ -18,47 +18,47 @@ export default function QuoteCreateFromPromptPage() {
   const [step, setStep] = useState<'prompt' | 'edit'>('prompt')
   const [generatedData, setGeneratedData] = useState<QuoteGenResponse | null>(null)
   const [items, setItems] = useState<QuoteItem[]>([])
-  const [title, setTitle] = useState('')
   const [originalPrompt, setOriginalPrompt] = useState('')
+  const [quoteId, setQuoteId] = useState<string | null>(null)
 
-  const handleGenerate = (prompt: string, response: QuoteGenResponse) => {
+  const handleGenerate = async (prompt: string, response: QuoteGenResponse) => {
     setOriginalPrompt(prompt)
     setGeneratedData(response)
     setItems(response.items)
-    setStep('edit')
-  }
-
-  const handleSave = async () => {
-    if (items.length === 0) {
-      toast({
-        title: 'No items to save',
-        description: 'Please add at least one item to the quote.',
-        variant: 'destructive',
-      })
-      return
-    }
-
+    
+    // Auto-save as draft so chat interface can work immediately
     try {
       const quote = await createQuote.mutateAsync({
-        title: title || undefined,
-        prompt: originalPrompt,
-        currency: generatedData?.currency || 'USD',
-        items,
+        title: undefined,
+        prompt: prompt,
+        currency: response.currency || 'USD',
+        items: response.items,
       })
-
+      
+      setQuoteId(quote.id)
+      setStep('edit')
+      
       toast({
-        title: 'Quote created successfully',
-        description: 'Your quote has been saved. Use the chat to make modifications.',
+        title: 'Quote generated',
+        description: 'Use the chat below to modify items or save when ready.',
       })
-
-      // Navigate to quote detail page where user can use chat to modify
-      navigate(`/quotes/${quote.id}`)
     } catch (error) {
       toast({
         title: 'Error creating quote',
-        description: 'There was an error saving the quote. Please try again.',
+        description: 'There was an error. Please try again.',
         variant: 'destructive',
       })
+    }
+  }
+
+  const handleSave = () => {
+    // Quote is already saved, just navigate to it
+    if (quoteId) {
+      toast({
+        title: 'Quote ready',
+        description: 'Your quote has been saved successfully.',
+      })
+      navigate(`/quotes/${quoteId}`)
     }
   }
 
@@ -66,8 +66,8 @@ export default function QuoteCreateFromPromptPage() {
     setStep('prompt')
     setGeneratedData(null)
     setItems([])
-    setTitle('')
     setOriginalPrompt('')
+    setQuoteId(null)
   }
 
   return (
@@ -83,9 +83,9 @@ export default function QuoteCreateFromPromptPage() {
                 <RotateCcw className="mr-2 h-4 w-4" />
                 Start Over
               </Button>
-              <Button onClick={handleSave} disabled={createQuote.isPending}>
+              <Button onClick={handleSave} disabled={!quoteId}>
                 <Save className="mr-2 h-4 w-4" />
-                Save Quote
+                Finish & View Quote
               </Button>
             </div>
           )
@@ -103,29 +103,10 @@ export default function QuoteCreateFromPromptPage() {
 
       {step === 'edit' && generatedData && (
         <div className="space-y-6 max-w-5xl mx-auto">
-          {/* Quote Title Field */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Quote Title</CardTitle>
-              <CardDescription>
-                Set a title for this quote (optional). After saving, you can use the AI chat to modify items.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Enter quote title (optional)"
-                className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
-              />
-            </CardContent>
-          </Card>
-
           {/* Quote Widget */}
           <QuoteWidget
             quote={{
-              id: 'new-quote',
+              id: quoteId || 'new-quote',
               prompt: originalPrompt,
               currency: generatedData.currency,
               total_amount: items.reduce((sum, item) => sum + (item.subtotal || 0), 0),
@@ -136,20 +117,16 @@ export default function QuoteCreateFromPromptPage() {
             }}
           />
           
-          <Card className="bg-blue-50 border-blue-200">
-            <CardContent className="pt-6">
-              <div className="flex items-start gap-3">
-                <div className="text-blue-600 text-2xl">💬</div>
-                <div>
-                  <h3 className="font-semibold text-blue-900 mb-1">Need to make changes?</h3>
-                  <p className="text-sm text-blue-700">
-                    Save this quote and use the AI-powered chat interface to add, remove, or modify items. 
-                    You can even attach images or documents for better context!
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* AI Chat Interface for Quote Modifications */}
+          {quoteId && (
+            <QuoteChatInterface 
+              quoteId={quoteId}
+              onQuoteUpdated={() => {
+                // Optionally refetch quote data here if needed
+                window.location.reload()
+              }}
+            />
+          )}
         </div>
       )}
     </div>

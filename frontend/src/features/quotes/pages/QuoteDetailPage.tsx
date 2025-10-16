@@ -20,7 +20,6 @@ import { formatCurrency, formatDateTime } from '@/lib-utils/format'
 import ItemFeedbackDialog from '../components/ItemFeedbackDialog'
 import ItemFeedbackDisplay from '../components/ItemFeedbackDisplay'
 import QuoteWidget from '../components/QuoteWidget'
-import QuoteChatInterface from '../components/QuoteChatInterface'
 
 const statusConfig = {
   draft: { color: 'bg-gray-100 text-gray-800', label: 'Draft' },
@@ -363,11 +362,6 @@ export default function QuoteDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Chat Interface for Quote Modifications */}
-          <QuoteChatInterface 
-            quoteId={id!} 
-            onQuoteUpdated={() => refetch()}
-          />
         </div>
 
         {/* Sidebar */}
