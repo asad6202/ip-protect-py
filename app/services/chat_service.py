@@ -90,8 +90,8 @@ class ChatService:
     def _build_system_prompt(self, quote: Dict[str, Any]) -> str:
         """Build system prompt with quote context."""
         items_summary = "\n".join([
-            f"- {item['quantity']}x {item['name']} ({item['sku']}) @ {item['unit_price']} each"
-            for item in quote.get('items', [])
+            f"- {item['quantity']}x {item['description']} ({item['sku']}) @ {item['unit_price']} each"
+            for item in quote.get('items', []) if item
         ])
         
         return f"""You are a helpful assistant for modifying CCTV product quotes.
@@ -177,12 +177,12 @@ If a user uploads an image, analyze it for relevant information (e.g., floor pla
                     json_build_object(
                         'id', qi.id,
                         'sku', qi.sku,
-                        'name', qi.name,
+                        'description', qi.description,
                         'quantity', qi.quantity,
                         'unit_price', qi.unit_price,
-                        'total_price', qi.total_price,
-                        'metadata', qi.metadata
-                    ) ORDER BY qi.line_number
+                        'subtotal', qi.subtotal,
+                        'item_metadata', qi.item_metadata
+                    ) ORDER BY qi.position
                 ) FILTER (WHERE qi.id IS NOT NULL) as items
             FROM quotes q
             LEFT JOIN quote_items qi ON q.id = qi.quote_id
@@ -193,7 +193,12 @@ If a user uploads an image, analyze it for relevant information (e.g., floor pla
         if not row:
             return None
         
-        return dict(row)
+        # Convert row to dict and parse JSON items
+        result = dict(row)
+        if result.get('items') and isinstance(result['items'], str):
+            result['items'] = json.loads(result['items'])
+        
+        return result
     
     async def _apply_modifications(
         self,
@@ -218,8 +223,7 @@ If a user uploads an image, analyze it for relevant information (e.g., floor pla
                 row = await self.db_conn.fetchrow(
                     """UPDATE quote_items 
                        SET quantity = $3, 
-                           total_price = unit_price * $3,
-                           updated_at = NOW()
+                           subtotal = unit_price * $3
                        WHERE quote_id = $1 AND sku = $2
                        RETURNING *""",
                     quote_id, item["sku"], item["quantity"]
@@ -240,22 +244,27 @@ If a user uploads an image, analyze it for relevant information (e.g., floor pla
                     best_product = candidates[0]
                     quantity = new_item.get("quantity", 1)
                     
+                    # Get next position
+                    next_pos_row = await self.db_conn.fetchrow(
+                        "SELECT COALESCE(MAX(position), 0) + 1 as next_pos FROM quote_items WHERE quote_id = $1",
+                        quote_id
+                    )
+                    next_position = next_pos_row['next_pos'] if next_pos_row else 1
+                    
                     row = await self.db_conn.fetchrow(
                         """INSERT INTO quote_items 
-                           (quote_id, sku, name, description, quantity, unit_price, total_price, currency, line_number, metadata)
-                           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 
-                                   (SELECT COALESCE(MAX(line_number), 0) + 1 FROM quote_items WHERE quote_id = $1),
-                                   $9)
+                           (quote_id, sku, description, quantity, unit_price, subtotal, currency, position, item_metadata)
+                           VALUES ($1::varchar, $2::text, $3::text, $4::int, $5::numeric, $6::numeric, $7::text, $8::int, $9::jsonb)
                            RETURNING *""",
                         quote_id,
                         best_product['sku'],
-                        best_product.get('name', ''),
                         best_product.get('description', ''),
                         quantity,
                         float(best_product.get('price', 0)),
                         float(best_product.get('price', 0)) * quantity,
                         quote.get('currency', 'USD'),
-                        {'added_via_chat': True}
+                        next_position,
+                        json.dumps({'added_via_chat': True})
                     )
                     if row:
                         updated_items.append(dict(row))
@@ -277,19 +286,16 @@ If a user uploads an image, analyze it for relevant information (e.g., floor pla
                     row = await self.db_conn.fetchrow(
                         """UPDATE quote_items 
                            SET sku = $3,
-                               name = $4,
-                               description = $5,
-                               unit_price = $6,
-                               total_price = quantity * $6,
-                               metadata = COALESCE(metadata, '{}'::jsonb) || 
-                                         jsonb_build_object('replaced_via_chat', true, 'original_sku', $2),
-                               updated_at = NOW()
+                               description = $4,
+                               unit_price = $5,
+                               subtotal = quantity * $5,
+                               item_metadata = COALESCE(item_metadata, '{}'::jsonb) || 
+                                         jsonb_build_object('replaced_via_chat', true, 'original_sku', $2)
                            WHERE quote_id = $1 AND sku = $2
                            RETURNING *""",
                         quote_id,
                         old_sku,
                         best_product['sku'],
-                        best_product.get('name', ''),
                         best_product.get('description', ''),
                         float(best_product.get('price', 0))
                     )
@@ -306,11 +312,10 @@ If a user uploads an image, analyze it for relevant information (e.g., floor pla
         await self.db_conn.execute(
             """UPDATE quotes 
                SET total_amount = (
-                   SELECT COALESCE(SUM(total_price), 0) 
+                   SELECT COALESCE(SUM(subtotal), 0) 
                    FROM quote_items 
                    WHERE quote_id = $1
-               ),
-               updated_at = NOW()
+               )
                WHERE id = $1""",
             quote_id
         )
