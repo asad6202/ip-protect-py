@@ -20,12 +20,7 @@ export function useModifyQuoteWithChat() {
     mutationFn: async (formData: FormData) => {
       const response = await api.post<ChatResponse>(
         '/v1/chat/modify-quote',
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
+        formData
       )
       return response.data
     },
