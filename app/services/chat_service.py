@@ -355,5 +355,6 @@ If a user uploads an image, analyze it for relevant information (e.g., floor pla
         )
         
         if row and row['history']:
-            return json.loads(row['history'])
+            # PostgreSQL JSONB is already parsed, no need for json.loads()
+            return row['history'] if isinstance(row['history'], list) else []
         return []

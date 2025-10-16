@@ -31,7 +31,7 @@ export default function QuoteChatInterface({ quoteId, onQuoteUpdated }: QuoteCha
 
   useEffect(() => {
     if (persistedHistory && persistedHistory.length > 0) {
-      setChatHistory(persistedHistory)
+      setChatHistory(persistedHistory as ChatMessage[])
     }
   }, [persistedHistory])
 
