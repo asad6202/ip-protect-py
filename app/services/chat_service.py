@@ -234,6 +234,7 @@ If a user uploads an image, analyze it for relevant information (e.g., floor pla
         # Handle new items - integrate with product search
         if modifications.get("add_items"):
             from app.services.retrieval import ProductRetrieval
+            from decimal import Decimal
             retrieval = ProductRetrieval(self.db_conn)
             
             for new_item in modifications["add_items"]:
@@ -242,29 +243,39 @@ If a user uploads an image, analyze it for relevant information (e.g., floor pla
                 
                 if candidates and len(candidates) > 0:
                     best_product = candidates[0]
-                    quantity = new_item.get("quantity", 1)
+                    quantity = int(new_item.get("quantity", 1))
                     
                     # Get next position
                     next_pos_row = await self.db_conn.fetchrow(
                         "SELECT COALESCE(MAX(position), 0) + 1 as next_pos FROM quote_items WHERE quote_id = $1",
                         quote_id
                     )
-                    next_position = next_pos_row['next_pos'] if next_pos_row else 1
+                    next_position = int(next_pos_row['next_pos']) if next_pos_row else 1
+                    
+                    # Ensure price is a Decimal
+                    price = best_product.get('price', 0)
+                    if price is None:
+                        price = 0
+                    unit_price = Decimal(str(price))
+                    subtotal = unit_price * quantity
+                    
+                    # Prepare metadata
+                    metadata_json = json.dumps({'added_via_chat': True})
                     
                     row = await self.db_conn.fetchrow(
                         """INSERT INTO quote_items 
                            (quote_id, sku, description, quantity, unit_price, subtotal, currency, position, item_metadata)
-                           VALUES ($1::varchar, $2::text, $3::text, $4::int, $5::numeric, $6::numeric, $7::text, $8::int, $9::jsonb)
+                           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)
                            RETURNING *""",
-                        quote_id,
-                        best_product['sku'],
-                        best_product.get('description', ''),
+                        str(quote_id),
+                        str(best_product['sku']),
+                        str(best_product.get('description', '')),
                         quantity,
-                        float(best_product.get('price', 0)),
-                        float(best_product.get('price', 0)) * quantity,
-                        quote.get('currency', 'USD'),
+                        unit_price,
+                        subtotal,
+                        str(quote.get('currency', 'USD')),
                         next_position,
-                        json.dumps({'added_via_chat': True})
+                        metadata_json
                     )
                     if row:
                         updated_items.append(dict(row))
