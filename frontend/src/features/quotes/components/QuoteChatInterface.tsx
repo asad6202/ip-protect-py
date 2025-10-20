@@ -76,7 +76,7 @@ export default function QuoteChatInterface({ quoteId, onQuoteUpdated }: QuoteCha
     // Add loading message
     const loadingMessage: ChatMessage = {
       role: 'assistant',
-      content: '...',
+      content: 'Loading...',
       timestamp: new Date().toISOString()
     }
     setChatHistory(prev => [...prev, loadingMessage])
@@ -246,8 +246,9 @@ export default function QuoteChatInterface({ quoteId, onQuoteUpdated }: QuoteCha
               <Textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Ask to add, remove, or modify items... (e.g., 'Add 3 outdoor 5MP cameras')"
+                placeholder="Ask to add, remove, or modify items... (e.g., 'Add 3 outdoor 5MP cameras' or 'Combine with quote Q-123')"
                 className="min-h-[80px] resize-none"
+                disabled={modifyQuote.isPending}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault()
@@ -272,6 +273,7 @@ export default function QuoteChatInterface({ quoteId, onQuoteUpdated }: QuoteCha
                   variant="outline"
                   size="sm"
                   onClick={() => fileInputRef.current?.click()}
+                  disabled={modifyQuote.isPending}
                 >
                   <Paperclip className="h-4 w-4 mr-2" />
                   Attach Files

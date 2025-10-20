@@ -41,14 +41,14 @@ class ChatResponse(BaseModel):
     modifications: Optional[Dict[str, Any]] = None
 
 
-@router.post("/chat/modify-quote", response_model=ChatResponse)
+@router.post("/chat/modify-quote")
 async def modify_quote_with_chat(
     quote_id: str = Form(...),
     message: str = Form(...),
     chat_history: str = Form("[]"),
     files: List[UploadFile] = File(default=[]),
     db: Database = Depends(get_database)
-) -> ChatResponse:
+):
     """
     Process chat message to modify a quote.
     Supports file attachments (images, PDFs, etc.) for context.

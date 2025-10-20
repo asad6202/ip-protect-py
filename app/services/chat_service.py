@@ -218,8 +218,13 @@ If a user uploads an image, analyze it for relevant information (e.g., floor pla
             if source_quote_id:
                 quote_service = QuoteService(self.db_conn)
                 merged_quote = await quote_service.merge_quotes(quote_id, source_quote_id)
-                # Return all items from merged quote
-                return merged_quote.get('items', [])
+                # Convert Pydantic model to dict and return all items from merged quote
+                if hasattr(merged_quote, 'items'):
+                    return merged_quote.items
+                elif hasattr(merged_quote, 'model_dump'):
+                    return merged_quote.model_dump().get('items', [])
+                else:
+                    return []
         
         # Handle item removals
         if modifications.get("remove_items"):
