@@ -44,6 +44,13 @@ Preferred communication style: Simple, everyday language.
   - Automated product search and quote updates (add, remove, replace items)
   - Persistent chat history per quote stored in database metadata
   - Real-time quote updates with UI refresh on modifications
+- **URL Scanning Feature**: Extract products from external websites
+  - Automatic URL detection in chat messages
+  - Web scraping with BeautifulSoup for HTML parsing
+  - AI-powered product extraction using GPT-4o
+  - Comprehensive SSRF protection (blocks private IPs, IPv4-mapped IPv6, tunneling)
+  - Secure redirect handling and response size limits
+  - Automatic merging of extracted products into existing quotes
 - **Intent Extraction**: GPT-4o-powered parsing of natural language requirements into structured search criteria
 - **Hybrid Search**: Deterministic keyword matching with optional vector similarity fallback
 - **Product Matching**: Family-aware search (camera/NVR/switch) with feature normalization
@@ -67,7 +74,7 @@ Preferred communication style: Simple, everyday language.
 - **Docker**: Optional containerization for PostgreSQL with pgvector
 
 ## Third-party Libraries
-- **Backend**: FastAPI, asyncpg, SQLAlchemy, pandas for data processing
+- **Backend**: FastAPI, asyncpg, SQLAlchemy, pandas for data processing, BeautifulSoup4 and lxml for web scraping, requests for HTTP client
 - **Frontend**: React Query for API state management, Axios for HTTP requests, react-hook-form with Zod validation
 - **UI Components**: Radix UI primitives with shadcn/ui design system
 
