@@ -317,29 +317,31 @@ If a user uploads an image, analyze it for relevant information (e.g., floor pla
         ai_response: str
     ):
         """Save chat message to quote metadata."""
-        # Store in quote metadata for now
-        # Could create a separate chat_messages table in future
+        # Build chat messages as Python dict, then convert to JSON
+        new_messages = [
+            {
+                'role': 'user',
+                'content': user_message,
+                'timestamp': 'NOW()'  # Will be replaced in query
+            },
+            {
+                'role': 'assistant',
+                'content': ai_response,
+                'timestamp': 'NOW()'  # Will be replaced in query
+            }
+        ]
+        
+        # Simpler approach: use a single JSONB parameter
         await self.db_conn.execute(
             """UPDATE quotes 
                SET metadata = COALESCE(metadata, '{}'::jsonb) || 
                    jsonb_build_object(
                        'chat_history', 
-                       COALESCE(metadata->'chat_history', '[]'::jsonb) || 
-                       jsonb_build_array(
-                           jsonb_build_object(
-                               'role', 'user',
-                               'content', $2,
-                               'timestamp', NOW()
-                           ),
-                           jsonb_build_object(
-                               'role', 'assistant',
-                               'content', $3,
-                               'timestamp', NOW()
-                           )
-                       )
+                       COALESCE(metadata->'chat_history', '[]'::jsonb) || $2::jsonb
                    )
                WHERE id = $1""",
-            quote_id, user_message, ai_response
+            quote_id,
+            json.dumps(new_messages)
         )
     
     async def get_chat_history(self, quote_id: str) -> List[Dict[str, Any]]:
