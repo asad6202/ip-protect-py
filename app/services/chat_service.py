@@ -5,6 +5,7 @@ Chat service for interactive quote modifications using OpenAI.
 import os
 import json
 import base64
+import re
 from typing import List, Dict, Any, Optional
 from openai import AsyncOpenAI
 
@@ -39,6 +40,11 @@ class ChatService:
         quote = await self._get_quote(quote_id)
         if not quote:
             raise ValueError(f"Quote {quote_id} not found")
+        
+        # Check if message contains URLs to scan
+        urls = self._extract_urls(message)
+        if urls:
+            return await self._handle_url_scan(quote_id, urls, message)
         
         # Build system prompt with quote context
         system_prompt = self._build_system_prompt(quote)
@@ -108,7 +114,7 @@ Current Items:
 Your task is to understand user requests to modify this quote and provide structured responses.
 
 When the user asks to modify the quote, you should:
-1. Understand what changes they want (add items, remove items, change quantities, merge with another quote, etc.)
+1. Understand what changes they want (add items, remove items, change quantities, merge with another quote, scan URLs, etc.)
 2. Provide a natural language response explaining what you'll do
 3. Return structured modifications in JSON format
 
@@ -117,6 +123,7 @@ Response Format (JSON):
     "response": "Natural language explanation of changes",
     "modifications": {{
         "merge_quote": {{"source_quote_id": "QUOTE-ID-HERE"}},  # Use when user wants to combine/merge quotes
+        "scan_url": {{"url": "https://example.com/products"}},  # Use when user provides a URL to scan
         "add_items": [
             {{"name": "Product Name", "quantity": 2, "search_criteria": {{"features": ["outdoor", "5mp"]}}}}
         ],
@@ -133,6 +140,7 @@ Response Format (JSON):
 }}
 
 If a user uploads an image, analyze it for relevant information (e.g., floor plans, site photos) to better understand their requirements.
+If a user provides a URL, detect it and set the scan_url modification to trigger automatic product extraction from the webpage.
 """
     
     def _build_user_message(
@@ -168,6 +176,80 @@ If a user uploads an image, analyze it for relevant information (e.g., floor pla
                 })
         
         return content
+    
+    def _extract_urls(self, message: str) -> List[str]:
+        """
+        Extract URLs from a message.
+        
+        Args:
+            message: User message text
+        
+        Returns:
+            List of URLs found in the message
+        """
+        url_pattern = r'https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&/=]*)'
+        urls = re.findall(url_pattern, message)
+        return urls
+    
+    async def _handle_url_scan(
+        self,
+        quote_id: str,
+        urls: List[str],
+        message: str
+    ) -> Dict[str, Any]:
+        """
+        Handle URL scanning and merge products into quote.
+        
+        Args:
+            quote_id: ID of the quote
+            urls: List of URLs to scan
+            message: Original user message
+        
+        Returns:
+            Dict with scan results and response
+        """
+        from app.services.url_scanner_service import URLScannerService
+        
+        scanner_service = URLScannerService(self.db_conn)
+        all_products = []
+        successful_scans = 0
+        
+        for url in urls:
+            try:
+                scan_result = await scanner_service.scan_url(url)
+                if scan_result.get("success") and scan_result.get("products"):
+                    all_products.extend(scan_result["products"])
+                    successful_scans += 1
+            except Exception as e:
+                print(f"Error scanning URL {url}: {str(e)}")
+                continue
+        
+        if not all_products:
+            return {
+                "message": f"I scanned the URL(s) you provided, but couldn't find any products. Please make sure the URL contains product information.",
+                "updated_items": None,
+                "modifications": None
+            }
+        
+        try:
+            merge_result = await scanner_service.merge_products_into_quote(
+                quote_id,
+                all_products
+            )
+            
+            product_list = "\n".join([
+                f"- {p.get('name', 'Unknown')} ({p.get('quantity', 1)}x)"
+                for p in all_products[:5]
+            ])
+            more_text = f"\n...and {len(all_products) - 5} more" if len(all_products) > 5 else ""
+            
+            return {
+                "message": f"I've scanned {successful_scans} URL(s) and added {merge_result['added_items']} products to your quote:\n{product_list}{more_text}",
+                "updated_items": merge_result.get("new_items"),
+                "modifications": {"scan_url": {"urls": urls, "products_added": merge_result['added_items']}}
+            }
+        except Exception as e:
+            raise ValueError(f"Failed to merge products from URL: {str(e)}")
     
     async def _get_quote(self, quote_id: str) -> Optional[Dict[str, Any]]:
         """Fetch quote from database."""

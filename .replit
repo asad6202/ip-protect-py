@@ -39,9 +39,13 @@ externalPort = 3000
 localPort = 38299
 externalPort = 3001
 
+[[ports]]
+localPort = 43889
+externalPort = 3002
+
 [nix]
 channel = "stable-25_05"
-packages = ["glibcLocales", "libxcrypt", "postgresql"]
+packages = ["glibcLocales", "libxcrypt", "postgresql", "xcodebuild", "zlib"]
 
 [deployment]
 deploymentTarget = "autoscale"

@@ -4,11 +4,13 @@ Quote generation endpoint using the new database schema.
 
 from typing import List, Dict, Any
 from fastapi import APIRouter, HTTPException, Depends, Query
+from pydantic import BaseModel
 from schemas import (
     QuoteRequest, QuoteResponse, QuoteListResponse, 
     QuoteFeedbackRequest, QuoteFeedbackResponse
 )
 from app.services.quote_service import QuoteService
+from app.services.url_scanner_service import URLScannerService
 from db import Database
 
 router = APIRouter()
@@ -268,3 +270,70 @@ async def get_feedback_analytics(
 async def quote_health_check():
     """Health check endpoint for quote service."""
     return {"status": "healthy", "service": "quote_generation"}
+
+
+class URLScanRequest(BaseModel):
+    """Request model for URL scanning."""
+    url: str
+    quote_id: str
+
+
+@router.post("/quote/scan-url")
+async def scan_url(
+    request: URLScanRequest,
+    db: Database = Depends(get_database)
+) -> Dict[str, Any]:
+    """
+    Scan a URL to extract product information and merge with existing quote.
+    
+    Args:
+        request: URLScanRequest with url and quote_id
+    
+    Returns:
+        Dict with scan results and updated quote information
+    """
+    try:
+        if not db._pool:
+            await db.connect()
+
+        async with db._pool.acquire() as conn:
+            scanner_service = URLScannerService(conn)
+            
+            scan_result = await scanner_service.scan_url(request.url)
+            
+            if not scan_result.get("success"):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Failed to scan URL: {scan_result.get('error', 'Unknown error')}"
+                )
+            
+            if not scan_result.get("products"):
+                return {
+                    "success": True,
+                    "url": request.url,
+                    "message": "No products found on this page",
+                    "products": [],
+                    "added_items": 0
+                }
+            
+            merge_result = await scanner_service.merge_products_into_quote(
+                request.quote_id,
+                scan_result["products"]
+            )
+            
+            return {
+                "success": True,
+                "url": request.url,
+                "message": f"Successfully added {merge_result['added_items']} items from URL",
+                "products": scan_result["products"],
+                "added_items": merge_result["added_items"],
+                "total_items": merge_result["total_items"]
+            }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"URL scanning failed: {str(e)}"
+        )

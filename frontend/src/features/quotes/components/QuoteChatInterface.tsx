@@ -140,8 +140,8 @@ export default function QuoteChatInterface({ quoteId, onQuoteUpdated }: QuoteCha
           Modify Quote with AI
         </CardTitle>
         <CardDescription>
-          Chat with AI to modify this quote. You can add items, change quantities, or request replacements. 
-          Attach images or documents for context.
+          Chat with AI to modify this quote. You can add items, change quantities, request replacements, or scan product URLs. 
+          Attach images, documents, or paste URLs to external product pages for automatic extraction.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -153,7 +153,12 @@ export default function QuoteChatInterface({ quoteId, onQuoteUpdated }: QuoteCha
                 <div className="text-center space-y-2">
                   <Bot className="h-12 w-12 mx-auto opacity-50" />
                   <p>Start a conversation to modify your quote</p>
-                  <p className="text-xs">Examples: "Add 2 more outdoor cameras" or "Replace this with an indoor model"</p>
+                  <p className="text-xs">Examples:</p>
+                  <ul className="text-xs space-y-1">
+                    <li>"Add 2 more outdoor cameras"</li>
+                    <li>"Replace this with an indoor model"</li>
+                    <li>"Scan this URL: https://example.com/products"</li>
+                  </ul>
                 </div>
               </div>
             ) : (
