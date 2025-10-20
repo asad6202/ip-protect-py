@@ -866,6 +866,79 @@ class QuoteService:
         
         return True
     
+    async def merge_quotes(self, target_quote_id: str, source_quote_id: str) -> QuoteResponse:
+        """
+        Merge items from source quote into target quote.
+        All items from source quote are copied to target quote.
+        Returns the updated target quote.
+        """
+        # Check if both quotes exist
+        target_quote = await self.conn.fetchrow(
+            "SELECT id, title, currency FROM quotes WHERE id = $1",
+            target_quote_id
+        )
+        source_quote = await self.conn.fetchrow(
+            "SELECT id, title, currency FROM quotes WHERE id = $1",
+            source_quote_id
+        )
+        
+        if not target_quote:
+            raise ValueError(f"Target quote {target_quote_id} not found")
+        if not source_quote:
+            raise ValueError(f"Source quote {source_quote_id} not found")
+        
+        # Get maximum position in target quote
+        max_pos = await self.conn.fetchval(
+            "SELECT COALESCE(MAX(position), 0) FROM quote_items WHERE quote_id = $1",
+            target_quote_id
+        )
+        
+        # Copy all items from source to target quote
+        await self.conn.execute(
+            """INSERT INTO quote_items 
+               (id, quote_id, product_id, sku, description, quantity, unit_price, 
+                subtotal, currency, position, item_metadata, feedback_insights)
+               SELECT 
+                   gen_random_uuid()::text,
+                   $1,
+                   product_id,
+                   sku,
+                   description,
+                   quantity,
+                   unit_price,
+                   subtotal,
+                   $2,
+                   position + $3,
+                   COALESCE(item_metadata, '{}'::jsonb) || jsonb_build_object('merged_from_quote', $4),
+                   feedback_insights
+               FROM quote_items
+               WHERE quote_id = $4""",
+            target_quote_id,
+            target_quote['currency'],
+            max_pos,
+            source_quote_id
+        )
+        
+        # Update total for target quote
+        await self.conn.execute(
+            """UPDATE quotes 
+               SET total_amount = (
+                   SELECT COALESCE(SUM(subtotal), 0) 
+                   FROM quote_items 
+                   WHERE quote_id = $1
+               ),
+               notes = CASE 
+                   WHEN notes IS NULL OR notes = '' THEN $2
+                   ELSE notes || E'\n' || $2
+               END
+               WHERE id = $1""",
+            target_quote_id,
+            f"Merged items from quote: {source_quote['title'] or source_quote_id}"
+        )
+        
+        # Return the updated quote
+        return await self.get_quote(target_quote_id)
+    
     async def create_feedback(self, quote_id: str, feedback: QuoteFeedbackRequest) -> QuoteFeedbackResponse:
         """Create feedback for a quote."""
         # Check if quote exists

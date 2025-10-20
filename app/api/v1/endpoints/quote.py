@@ -186,6 +186,30 @@ async def delete_quote(
         raise HTTPException(status_code=500, detail=f"Failed to delete quote: {str(e)}")
 
 
+@router.post("/quote/{target_quote_id}/merge/{source_quote_id}", response_model=QuoteResponse)
+async def merge_quotes(
+    target_quote_id: str,
+    source_quote_id: str,
+    db: Database = Depends(get_database)
+) -> QuoteResponse:
+    """
+    Merge items from source quote into target quote.
+    All items from the source quote are copied to the target quote.
+    """
+    try:
+        if not db._pool:
+            await db.connect()
+
+        async with db._pool.acquire() as conn:
+            quote_service = QuoteService(conn)
+            return await quote_service.merge_quotes(target_quote_id, source_quote_id)
+    
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to merge quotes: {str(e)}")
+
+
 @router.get("/quote/{quote_id}/feedback", response_model=List[QuoteFeedbackResponse])
 async def get_quote_feedback(
     quote_id: str,

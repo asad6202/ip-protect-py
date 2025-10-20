@@ -98,6 +98,7 @@ class ChatService:
 
 Current Quote Information:
 Title: {quote.get('title', 'Untitled Quote')}
+Quote ID: {quote.get('id')}
 Total Items: {len(quote.get('items', []))}
 Currency: {quote.get('currency', 'USD')}
 
@@ -107,7 +108,7 @@ Current Items:
 Your task is to understand user requests to modify this quote and provide structured responses.
 
 When the user asks to modify the quote, you should:
-1. Understand what changes they want (add items, remove items, change quantities, etc.)
+1. Understand what changes they want (add items, remove items, change quantities, merge with another quote, etc.)
 2. Provide a natural language response explaining what you'll do
 3. Return structured modifications in JSON format
 
@@ -115,6 +116,7 @@ Response Format (JSON):
 {{
     "response": "Natural language explanation of changes",
     "modifications": {{
+        "merge_quote": {{"source_quote_id": "QUOTE-ID-HERE"}},  # Use when user wants to combine/merge quotes
         "add_items": [
             {{"name": "Product Name", "quantity": 2, "search_criteria": {{"features": ["outdoor", "5mp"]}}}}
         ],
@@ -208,6 +210,16 @@ If a user uploads an image, analyze it for relevant information (e.g., floor pla
     ) -> List[Dict[str, Any]]:
         """Apply modifications to the quote."""
         updated_items = []
+        
+        # Handle quote merge first (if requested)
+        if modifications.get("merge_quote"):
+            from app.services.quote_service import QuoteService
+            source_quote_id = modifications["merge_quote"].get("source_quote_id")
+            if source_quote_id:
+                quote_service = QuoteService(self.db_conn)
+                merged_quote = await quote_service.merge_quotes(quote_id, source_quote_id)
+                # Return all items from merged quote
+                return merged_quote.get('items', [])
         
         # Handle item removals
         if modifications.get("remove_items"):
