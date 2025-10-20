@@ -6,7 +6,7 @@ import PageHeader from '@/components/common/PageHeader'
 import QuotePromptForm from '../components/QuotePromptForm'
 import QuoteWidget from '../components/QuoteWidget'
 import QuoteChatInterface from '../components/QuoteChatInterface'
-import { useCreateQuote } from '../api'
+import { useCreateQuote, useGetQuote } from '../api'
 import { QuoteItem, QuoteGenResponse } from '@/lib-utils/types'
 import { useToast } from '@/components/ui/use-toast'
 
@@ -20,6 +20,9 @@ export default function QuoteCreateFromPromptPage() {
   const [items, setItems] = useState<QuoteItem[]>([])
   const [originalPrompt, setOriginalPrompt] = useState('')
   const [quoteId, setQuoteId] = useState<string | null>(null)
+  
+  // Fetch quote data for updates
+  const { data: quoteData, refetch: refetchQuote } = useGetQuote(quoteId || '')
 
   const handleGenerate = async (prompt: string, response: QuoteGenResponse) => {
     setOriginalPrompt(prompt)
@@ -103,9 +106,9 @@ export default function QuoteCreateFromPromptPage() {
 
       {step === 'edit' && generatedData && (
         <div className="space-y-6 max-w-5xl mx-auto">
-          {/* Quote Widget */}
+          {/* Quote Widget - use quoteData if available, otherwise use local state */}
           <QuoteWidget
-            quote={{
+            quote={quoteData || {
               id: quoteId || 'new-quote',
               prompt: originalPrompt,
               currency: generatedData.currency,
@@ -121,9 +124,18 @@ export default function QuoteCreateFromPromptPage() {
           {quoteId && (
             <QuoteChatInterface 
               quoteId={quoteId}
-              onQuoteUpdated={() => {
-                // Optionally refetch quote data here if needed
-                window.location.reload()
+              onQuoteUpdated={async () => {
+                // Refetch the updated quote data
+                const result = await refetchQuote()
+                if (result.data && generatedData) {
+                  setItems(result.data.items || [])
+                  setGeneratedData({
+                    ...generatedData,
+                    items: result.data.items || [],
+                    total: result.data.total_amount || 0,
+                    currency: result.data.currency || 'USD'
+                  })
+                }
               }}
             />
           )}
