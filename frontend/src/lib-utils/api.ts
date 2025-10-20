@@ -26,8 +26,8 @@ api.interceptors.response.use(
     return response
   },
   (error) => {
-    const message = error.response?.data?.detail || error.message || 'An error occurred'
-    throw new Error(message)
+    // Pass the original axios error through so we can access response data
+    return Promise.reject(error)
   }
 )
 

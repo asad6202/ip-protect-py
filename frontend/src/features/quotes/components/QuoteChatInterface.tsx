@@ -109,12 +109,23 @@ export default function QuoteChatInterface({ quoteId, onQuoteUpdated }: QuoteCha
       }
     } catch (error: any) {
       console.error('Chat error:', error)
+      
+      // Extract error message from various possible error formats
+      let errorMessage = 'Please try again.'
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail
+      } else if (error.message) {
+        errorMessage = error.message
+      } else if (typeof error === 'string') {
+        errorMessage = error
+      }
+      
       // Remove loading message and add error message
       setChatHistory(prev => {
         const withoutLoading = prev.slice(0, -1)
         return [...withoutLoading, {
           role: 'assistant',
-          content: `Sorry, I encountered an error: ${error.message || 'Please try again.'}`,
+          content: `Sorry, I encountered an error: ${errorMessage}`,
           timestamp: new Date().toISOString()
         }]
       })
