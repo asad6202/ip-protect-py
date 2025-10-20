@@ -44,11 +44,11 @@ class ChatResponse(BaseModel):
 
 @router.post("/chat/modify-quote")
 async def modify_quote_with_chat(
+    db: Database = Depends(get_database),
     quote_id: str = Form(...),
     message: str = Form(...),
     chat_history: str = Form("[]"),
-    files: Optional[List[UploadFile]] = File(None),
-    db: Database = Depends(get_database)
+    files: List[UploadFile] = File(default=[])
 ):
     """
     Process chat message to modify a quote.
