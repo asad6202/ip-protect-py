@@ -39,9 +39,11 @@ Preferred communication style: Simple, everyday language.
   - Uses OPENAI_API_KEY from environment secrets for secure API access
 - **Attachment-Based Quote Generation**: AI-powered quote generation directly from files
   - Upload images, PDFs, or documents on the quote creation screen
-  - GPT-4o vision API processes images directly via base64 encoding
-  - PyPDF2 library extracts text from PDF documents
-  - Text files (TXT, CSV) decoded and sent to OpenAI
+  - **Intelligent Image Processing**: Automatic compression and resizing (max 2048px, 85% quality JPEG)
+  - **Smart PDF Handling**: PyPDF2 text extraction with automatic chunking for large documents (>30k tokens)
+  - **Two-Stage Processing**: Large content summarized via GPT-4o-mini before GPT-4o quote generation
+  - **Token Management**: Automatic detection and summarization of oversized attachments
+  - Text files (TXT, CSV) decoded with chunking support for large files
   - Skips database product lookup entirely when attachments provided
   - Generates structured quote data from attachment content
   - Backward compatible with traditional prompt-only workflow
@@ -82,7 +84,7 @@ Preferred communication style: Simple, everyday language.
 - **Docker**: Optional containerization for PostgreSQL with pgvector
 
 ## Third-party Libraries
-- **Backend**: FastAPI, asyncpg, SQLAlchemy, pandas for data processing, BeautifulSoup4 and lxml for web scraping, requests for HTTP client, PyPDF2 for PDF text extraction
+- **Backend**: FastAPI, asyncpg, SQLAlchemy, pandas for data processing, BeautifulSoup4 and lxml for web scraping, requests for HTTP client, PyPDF2 for PDF text extraction, Pillow (PIL) for image compression and processing
 - **Frontend**: React Query for API state management, Axios for HTTP requests, react-hook-form with Zod validation
 - **UI Components**: Radix UI primitives with shadcn/ui design system
 
