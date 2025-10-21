@@ -355,11 +355,11 @@ class QuoteService:
             return image_bytes
     
     def _chunk_text(self, text: str, max_tokens: int = 20000) -> List[str]:
-        """Split text into chunks that fit within token limits."""
+        """Split text into chunks that fit within token limits with guaranteed hard limits."""
         max_chars = max_tokens * 4  # Approximate character limit
         chunks = []
         
-        # Split by double newlines (paragraphs) for better context preservation
+        # First, try splitting by double newlines (paragraphs) for better context
         paragraphs = text.split('\n\n')
         current_chunk = []
         current_size = 0
@@ -367,7 +367,44 @@ class QuoteService:
         for para in paragraphs:
             para_size = len(para)
             
-            if current_size + para_size > max_chars and current_chunk:
+            # If a single paragraph is too large, split it further
+            if para_size > max_chars:
+                # Save current chunk if it exists
+                if current_chunk:
+                    chunks.append('\n\n'.join(current_chunk))
+                    current_chunk = []
+                    current_size = 0
+                
+                # Split the oversized paragraph by sentences
+                sentences = para.replace('. ', '.\n').split('\n')
+                temp_chunk = []
+                temp_size = 0
+                
+                for sentence in sentences:
+                    sentence_size = len(sentence)
+                    
+                    # If a single sentence is too large, force split by characters
+                    if sentence_size > max_chars:
+                        if temp_chunk:
+                            chunks.append(' '.join(temp_chunk))
+                            temp_chunk = []
+                            temp_size = 0
+                        
+                        # Force split by character chunks
+                        for i in range(0, sentence_size, max_chars):
+                            chunks.append(sentence[i:i + max_chars])
+                    elif temp_size + sentence_size > max_chars and temp_chunk:
+                        chunks.append(' '.join(temp_chunk))
+                        temp_chunk = [sentence]
+                        temp_size = sentence_size
+                    else:
+                        temp_chunk.append(sentence)
+                        temp_size += sentence_size
+                
+                if temp_chunk:
+                    chunks.append(' '.join(temp_chunk))
+                
+            elif current_size + para_size > max_chars and current_chunk:
                 # Save current chunk and start a new one
                 chunks.append('\n\n'.join(current_chunk))
                 current_chunk = [para]
@@ -380,17 +417,20 @@ class QuoteService:
         if current_chunk:
             chunks.append('\n\n'.join(current_chunk))
         
+        # Ensure we always return multiple chunks if text is too large
+        if not chunks and text:
+            # Fallback: force split by character chunks
+            for i in range(0, len(text), max_chars):
+                chunks.append(text[i:i + max_chars])
+        
         return chunks if chunks else [text]
     
     async def _summarize_large_content(self, content: str, filename: str) -> str:
         """Summarize large content using GPT-4o-mini to extract product information."""
         chunks = self._chunk_text(content, max_tokens=20000)
         
-        if len(chunks) == 1:
-            # Content fits in one chunk, no summarization needed
-            return content
-        
         # Process each chunk and extract product information
+        # Even if there's only one chunk, we still summarize to reduce token count
         summaries = []
         
         for i, chunk in enumerate(chunks):
