@@ -13,6 +13,7 @@ from uuid import uuid4
 from fastapi import UploadFile
 from openai import AsyncOpenAI
 from PyPDF2 import PdfReader
+from PIL import Image
 
 from app.ai.intent_extractor import extract_intent
 from app.ai.agent_workflow import get_agent_workflow
@@ -316,6 +317,43 @@ class QuoteService:
         """Estimate token count for text (approximate: 1 token ≈ 4 characters for English)."""
         return len(text) // 4
     
+    def _compress_image(self, image_bytes: bytes, max_size: int = 2048, quality: int = 85) -> bytes:
+        """Compress and resize image to reduce token usage."""
+        try:
+            # Open the image
+            image = Image.open(io.BytesIO(image_bytes))
+            
+            # Convert RGBA to RGB if needed (for JPEG compatibility)
+            if image.mode == 'RGBA':
+                background = Image.new('RGB', image.size, (255, 255, 255))
+                background.paste(image, mask=image.split()[3])  # Use alpha channel as mask
+                image = background
+            elif image.mode != 'RGB':
+                image = image.convert('RGB')
+            
+            # Resize if too large (maintain aspect ratio)
+            if max(image.width, image.height) > max_size:
+                ratio = max_size / max(image.width, image.height)
+                new_width = int(image.width * ratio)
+                new_height = int(image.height * ratio)
+                image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            
+            # Save to bytes with compression
+            output = io.BytesIO()
+            image.save(output, format='JPEG', quality=quality, optimize=True)
+            compressed_bytes = output.getvalue()
+            
+            # Calculate compression ratio
+            original_size = len(image_bytes)
+            compressed_size = len(compressed_bytes)
+            compression_ratio = (1 - compressed_size / original_size) * 100
+            print(f"Image compressed: {original_size} -> {compressed_size} bytes ({compression_ratio:.1f}% reduction)")
+            
+            return compressed_bytes
+        except Exception as e:
+            print(f"Error compressing image: {str(e)}, using original")
+            return image_bytes
+    
     def _chunk_text(self, text: str, max_tokens: int = 20000) -> List[str]:
         """Split text into chunks that fit within token limits."""
         max_chars = max_tokens * 4  # Approximate character limit
@@ -404,12 +442,13 @@ Be concise but include all relevant product details. Use bullet points."""
                 await attachment.seek(0)
                 
                 if content_type.startswith('image/'):
-                    # Image file - encode to base64
-                    base64_image = base64.b64encode(file_content).decode('utf-8')
+                    # Image file - compress and encode to base64
+                    compressed_image = self._compress_image(file_content, max_size=2048, quality=85)
+                    base64_image = base64.b64encode(compressed_image).decode('utf-8')
                     attachment_contents.append({
                         "type": "image_url",
                         "image_url": {
-                            "url": f"data:{content_type};base64,{base64_image}"
+                            "url": f"data:image/jpeg;base64,{base64_image}"  # Always JPEG after compression
                         }
                     })
                 elif content_type == 'application/pdf' or attachment.filename.lower().endswith('.pdf'):

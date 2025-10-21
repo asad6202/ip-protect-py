@@ -39,6 +39,10 @@ externalPort = 3000
 localPort = 38299
 externalPort = 3001
 
+[[ports]]
+localPort = 40765
+externalPort = 3002
+
 [nix]
 channel = "stable-25_05"
 packages = ["freetype", "glibcLocales", "lcms2", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "openjpeg", "postgresql", "tcl", "tk", "xcodebuild", "zlib"]
