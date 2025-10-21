@@ -312,6 +312,84 @@ class QuoteService:
             print(f"Error generating quote data: {str(e)}")
             raise ValueError(f"Failed to generate quote: {str(e)}")
     
+    def _estimate_tokens(self, text: str) -> int:
+        """Estimate token count for text (approximate: 1 token ≈ 4 characters for English)."""
+        return len(text) // 4
+    
+    def _chunk_text(self, text: str, max_tokens: int = 20000) -> List[str]:
+        """Split text into chunks that fit within token limits."""
+        max_chars = max_tokens * 4  # Approximate character limit
+        chunks = []
+        
+        # Split by double newlines (paragraphs) for better context preservation
+        paragraphs = text.split('\n\n')
+        current_chunk = []
+        current_size = 0
+        
+        for para in paragraphs:
+            para_size = len(para)
+            
+            if current_size + para_size > max_chars and current_chunk:
+                # Save current chunk and start a new one
+                chunks.append('\n\n'.join(current_chunk))
+                current_chunk = [para]
+                current_size = para_size
+            else:
+                current_chunk.append(para)
+                current_size += para_size + 2  # +2 for \n\n
+        
+        # Add the last chunk
+        if current_chunk:
+            chunks.append('\n\n'.join(current_chunk))
+        
+        return chunks if chunks else [text]
+    
+    async def _summarize_large_content(self, content: str, filename: str) -> str:
+        """Summarize large content using GPT-4o-mini to extract product information."""
+        chunks = self._chunk_text(content, max_tokens=20000)
+        
+        if len(chunks) == 1:
+            # Content fits in one chunk, no summarization needed
+            return content
+        
+        # Process each chunk and extract product information
+        summaries = []
+        
+        for i, chunk in enumerate(chunks):
+            try:
+                response = await self.openai_client.chat.completions.create(
+                    model="gpt-4o-mini",  # Cheaper/faster for summarization
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": """Extract product information from this document section. Focus on:
+- Product SKUs/model numbers
+- Product names and descriptions
+- Quantities
+- Prices
+- Technical specifications
+
+Be concise but include all relevant product details. Use bullet points."""
+                        },
+                        {
+                            "role": "user",
+                            "content": f"Document: {filename} (Part {i+1}/{len(chunks)})\n\n{chunk}"
+                        }
+                    ],
+                    temperature=0.0,
+                    max_tokens=2000
+                )
+                
+                summary = response.choices[0].message.content
+                summaries.append(f"[Part {i+1}/{len(chunks)}]\n{summary}")
+                
+            except Exception as e:
+                print(f"Error summarizing chunk {i+1}: {str(e)}")
+                # Include a truncated version if summarization fails
+                summaries.append(f"[Part {i+1}/{len(chunks)} - Summary failed]\n{chunk[:1000]}...")
+        
+        return "\n\n---\n\n".join(summaries)
+
     async def generate_quote_from_attachments(self, prompt: str, attachments: List[UploadFile]):
         """Generate quote data from attachments using OpenAI vision API, skipping database lookup."""
         try:
@@ -346,10 +424,25 @@ class QuoteService:
                         
                         if pdf_text_parts:
                             full_pdf_text = "\n\n".join(pdf_text_parts)
-                            attachment_contents.append({
-                                "type": "text",
-                                "text": f"PDF Document: {attachment.filename}\n\n{full_pdf_text}"
-                            })
+                            
+                            # Check if content is too large and needs summarization
+                            estimated_tokens = self._estimate_tokens(full_pdf_text)
+                            MAX_TOKENS_PER_ATTACHMENT = 30000  # Conservative limit to stay under 128k total
+                            
+                            if estimated_tokens > MAX_TOKENS_PER_ATTACHMENT:
+                                print(f"PDF {attachment.filename} is large ({estimated_tokens} tokens), using summarization...")
+                                # Use GPT-4o-mini to summarize and extract product info
+                                summarized_text = await self._summarize_large_content(full_pdf_text, attachment.filename)
+                                attachment_contents.append({
+                                    "type": "text",
+                                    "text": f"PDF Document: {attachment.filename} (Summarized - Original: {len(pdf_text_parts)} pages)\n\n{summarized_text}"
+                                })
+                            else:
+                                # Content fits within limits
+                                attachment_contents.append({
+                                    "type": "text",
+                                    "text": f"PDF Document: {attachment.filename}\n\n{full_pdf_text}"
+                                })
                         else:
                             # PDF has no extractable text (might be scanned images)
                             attachment_contents.append({
@@ -366,10 +459,23 @@ class QuoteService:
                     # Text-based file - try to decode as UTF-8
                     try:
                         text_content = file_content.decode('utf-8')
-                        attachment_contents.append({
-                            "type": "text",
-                            "text": f"File: {attachment.filename}\n\n{text_content}"
-                        })
+                        
+                        # Check if content is too large and needs summarization
+                        estimated_tokens = self._estimate_tokens(text_content)
+                        MAX_TOKENS_PER_ATTACHMENT = 30000
+                        
+                        if estimated_tokens > MAX_TOKENS_PER_ATTACHMENT:
+                            print(f"Text file {attachment.filename} is large ({estimated_tokens} tokens), using summarization...")
+                            summarized_text = await self._summarize_large_content(text_content, attachment.filename)
+                            attachment_contents.append({
+                                "type": "text",
+                                "text": f"File: {attachment.filename} (Summarized)\n\n{summarized_text}"
+                            })
+                        else:
+                            attachment_contents.append({
+                                "type": "text",
+                                "text": f"File: {attachment.filename}\n\n{text_content}"
+                            })
                     except:
                         # If cannot decode as text, include filename only
                         attachment_contents.append({

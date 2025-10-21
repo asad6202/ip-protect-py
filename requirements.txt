@@ -15,3 +15,4 @@ beautifulsoup4
 lxml
 requests
 pypdf2
+pillow

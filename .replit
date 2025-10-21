@@ -41,7 +41,7 @@ externalPort = 3001
 
 [nix]
 channel = "stable-25_05"
-packages = ["glibcLocales", "libxcrypt", "postgresql", "xcodebuild", "zlib"]
+packages = ["freetype", "glibcLocales", "lcms2", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "openjpeg", "postgresql", "tcl", "tk", "xcodebuild", "zlib"]
 
 [deployment]
 deploymentTarget = "autoscale"
