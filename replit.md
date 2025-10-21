@@ -37,6 +37,14 @@ Preferred communication style: Simple, everyday language.
   - Quote Builder Agent: Generates structured quote data from natural language
   - Guardrails System: PII detection, content moderation, and jailbreak prevention
   - Uses OPENAI_API_KEY from environment secrets for secure API access
+- **Attachment-Based Quote Generation**: AI-powered quote generation directly from files
+  - Upload images, PDFs, or documents on the quote creation screen
+  - GPT-4o vision API processes images directly via base64 encoding
+  - PyPDF2 library extracts text from PDF documents
+  - Text files (TXT, CSV) decoded and sent to OpenAI
+  - Skips database product lookup entirely when attachments provided
+  - Generates structured quote data from attachment content
+  - Backward compatible with traditional prompt-only workflow
 - **AI-Powered Chat Interface**: Interactive quote modification system
   - Natural language chat interface for modifying existing quotes
   - File attachment support (images, PDFs, documents) for additional context
@@ -74,7 +82,7 @@ Preferred communication style: Simple, everyday language.
 - **Docker**: Optional containerization for PostgreSQL with pgvector
 
 ## Third-party Libraries
-- **Backend**: FastAPI, asyncpg, SQLAlchemy, pandas for data processing, BeautifulSoup4 and lxml for web scraping, requests for HTTP client
+- **Backend**: FastAPI, asyncpg, SQLAlchemy, pandas for data processing, BeautifulSoup4 and lxml for web scraping, requests for HTTP client, PyPDF2 for PDF text extraction
 - **Frontend**: React Query for API state management, Axios for HTTP requests, react-hook-form with Zod validation
 - **UI Components**: Radix UI primitives with shadcn/ui design system
 
