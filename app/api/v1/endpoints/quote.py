@@ -2,8 +2,8 @@
 Quote generation endpoint using the new database schema.
 """
 
-from typing import List, Dict, Any
-from fastapi import APIRouter, HTTPException, Depends, Query
+from typing import List, Dict, Any, Optional
+from fastapi import APIRouter, HTTPException, Depends, Query, Form, File, UploadFile, Body
 from pydantic import BaseModel
 from schemas import (
     QuoteRequest, QuoteResponse, QuoteListResponse, 
@@ -29,21 +29,39 @@ def get_database() -> Database:
 
 @router.post("/quote/generate")
 async def generate_quote(
-    request: dict,
+    request: Optional[Dict] = Body(default=None),
+    prompt: Optional[str] = Form(default=None),
+    attachments: List[UploadFile] = File(default=[]),
     db: Database = Depends(get_database)
 ):
-    """Generate quote data from prompt without saving to database."""
+    """Generate quote data from prompt and/or attachments without saving to database.
+    Accepts both JSON (for prompt-only) and multipart/form-data (for attachments)."""
     try:
         if not db._pool:
             await db.connect()
 
         async with db._pool.acquire() as conn:
             quote_service = QuoteService(conn)
-            # Only generate quote data without saving
-            prompt = request.get('prompt', '')
-            if not prompt:
-                raise ValueError("Prompt is required")
-            return await quote_service.generate_quote_data(prompt)
+            
+            # Handle both JSON and FormData inputs
+            if request:
+                # JSON request (prompt-only, backward compatibility)
+                prompt_text = request.get('prompt', '')
+                if not prompt_text:
+                    raise ValueError("Prompt is required")
+                return await quote_service.generate_quote_data(prompt_text)
+            else:
+                # FormData request (with potential attachments)
+                if not prompt:
+                    raise ValueError("Prompt is required")
+                
+                # Check if attachments are provided
+                if attachments and len(attachments) > 0:
+                    # Use attachment-based generation (skip database lookup)
+                    return await quote_service.generate_quote_from_attachments(prompt, attachments)
+                else:
+                    # Use traditional database product lookup
+                    return await quote_service.generate_quote_data(prompt)
     
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

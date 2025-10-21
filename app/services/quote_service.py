@@ -4,9 +4,15 @@ Quote service for managing quotes in the new database schema.
 import asyncio
 import asyncpg
 import json
+import base64
+import os
+import io
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 from uuid import uuid4
+from fastapi import UploadFile
+from openai import AsyncOpenAI
+from PyPDF2 import PdfReader
 
 from app.ai.intent_extractor import extract_intent
 from app.ai.agent_workflow import get_agent_workflow
@@ -24,6 +30,7 @@ class QuoteService:
         self.retrieval = ProductRetrieval(conn)
         self.rule_engine = RuleEngine(conn)
         self.feedback_analyzer = ItemFeedbackAnalyzer(conn)
+        self.openai_client = AsyncOpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
     
     async def generate_quote_data(self, prompt: str):
         """Generate quote data from prompt without saving to database."""
@@ -304,6 +311,169 @@ class QuoteService:
         except Exception as e:
             print(f"Error generating quote data: {str(e)}")
             raise ValueError(f"Failed to generate quote: {str(e)}")
+    
+    async def generate_quote_from_attachments(self, prompt: str, attachments: List[UploadFile]):
+        """Generate quote data from attachments using OpenAI vision API, skipping database lookup."""
+        try:
+            # Process attachments and prepare for OpenAI
+            attachment_contents = []
+            
+            for attachment in attachments:
+                content_type = attachment.content_type or ''
+                file_content = await attachment.read()
+                
+                # Reset file pointer
+                await attachment.seek(0)
+                
+                if content_type.startswith('image/'):
+                    # Image file - encode to base64
+                    base64_image = base64.b64encode(file_content).decode('utf-8')
+                    attachment_contents.append({
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{content_type};base64,{base64_image}"
+                        }
+                    })
+                elif content_type == 'application/pdf' or attachment.filename.lower().endswith('.pdf'):
+                    # PDF file - extract text using PyPDF2
+                    try:
+                        pdf_reader = PdfReader(io.BytesIO(file_content))
+                        pdf_text_parts = []
+                        for page_num, page in enumerate(pdf_reader.pages):
+                            page_text = page.extract_text()
+                            if page_text.strip():
+                                pdf_text_parts.append(f"Page {page_num + 1}:\n{page_text}")
+                        
+                        if pdf_text_parts:
+                            full_pdf_text = "\n\n".join(pdf_text_parts)
+                            attachment_contents.append({
+                                "type": "text",
+                                "text": f"PDF Document: {attachment.filename}\n\n{full_pdf_text}"
+                            })
+                        else:
+                            # PDF has no extractable text (might be scanned images)
+                            attachment_contents.append({
+                                "type": "text",
+                                "text": f"PDF Document: {attachment.filename} (no extractable text - may contain images only)"
+                            })
+                    except Exception as e:
+                        print(f"Error extracting PDF text from {attachment.filename}: {str(e)}")
+                        attachment_contents.append({
+                            "type": "text",
+                            "text": f"PDF Document: {attachment.filename} (could not extract text)"
+                        })
+                elif content_type.startswith('text/') or attachment.filename.lower().endswith(('.txt', '.csv')):
+                    # Text-based file - try to decode as UTF-8
+                    try:
+                        text_content = file_content.decode('utf-8')
+                        attachment_contents.append({
+                            "type": "text",
+                            "text": f"File: {attachment.filename}\n\n{text_content}"
+                        })
+                    except:
+                        # If cannot decode as text, include filename only
+                        attachment_contents.append({
+                            "type": "text",
+                            "text": f"Document: {attachment.filename} (binary file - please use description from user)"
+                        })
+                else:
+                    # Other document types (DOC, DOCX, etc.)
+                    # Add as text description - user's prompt should describe the content
+                    attachment_contents.append({
+                        "type": "text",
+                        "text": f"Document: {attachment.filename}\nType: {content_type}\nNote: User will describe the product details from this document."
+                    })
+            
+            if not attachment_contents:
+                raise ValueError("No valid attachments to process")
+            
+            # Create messages for OpenAI with attachments
+            messages = [
+                {
+                    "role": "system",
+                    "content": """You are a quote generation assistant for CCTV/security camera systems. 
+Extract product information from the provided images and documents to create a structured quote.
+
+For each product found, extract:
+- SKU or model number
+- Product description
+- Quantity (if specified, otherwise default to 1)
+- Unit price (if available)
+- Currency (default to USD)
+
+Return the data as a JSON object with this structure:
+{
+  "items": [
+    {
+      "sku": "MODEL-123",
+      "description": "Product description",
+      "quantity": 1,
+      "unit_price": 100.00,
+      "currency": "USD"
+    }
+  ],
+  "currency": "USD",
+  "notes": "Any additional notes or observations"
+}"""
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": f"User request: {prompt}\n\nPlease extract product information from the attached files and generate a quote."},
+                        *attachment_contents
+                    ]
+                }
+            ]
+            
+            # Call OpenAI GPT-4o vision API
+            response = await self.openai_client.chat.completions.create(
+                model="gpt-4o",
+                messages=messages,
+                temperature=0.0,
+                response_format={"type": "json_object"}
+            )
+            
+            # Parse the response
+            result_text = response.choices[0].message.content
+            quote_data = json.loads(result_text)
+            
+            # Process items and calculate totals
+            quote_items = []
+            total_amount = 0.0
+            currency = quote_data.get('currency', 'USD')
+            
+            for i, item in enumerate(quote_data.get('items', [])):
+                quantity = int(item.get('quantity', 1))
+                unit_price = float(item.get('unit_price', 0))
+                subtotal = unit_price * quantity
+                
+                quote_items.append({
+                    'sku': item.get('sku', f'ITEM-{i+1}'),
+                    'description': item.get('description', 'No description'),
+                    'quantity': quantity,
+                    'unit_price': unit_price,
+                    'currency': item.get('currency', currency),
+                    'subtotal': subtotal,
+                    'product_id': None,  # No database lookup
+                    'metadata': {
+                        'source': 'attachment',
+                        'generated_from_ai': True
+                    },
+                    'position': i
+                })
+                
+                total_amount += subtotal
+            
+            return {
+                'items': quote_items,
+                'currency': currency,
+                'total': total_amount,
+                'notes': quote_data.get('notes', 'Quote generated from attachments using AI')
+            }
+            
+        except Exception as e:
+            print(f"Error generating quote from attachments: {str(e)}")
+            raise ValueError(f"Failed to generate quote from attachments: {str(e)}")
 
     async def create_quote(self, request: QuoteRequest) -> QuoteResponse:
         """Create a new quote and save it to the database."""

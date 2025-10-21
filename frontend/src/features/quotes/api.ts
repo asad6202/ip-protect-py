@@ -5,9 +5,32 @@ import { Quote, CreateQuoteRequest, UpdateQuoteRequest, QuoteGenResponse, Pagina
 // Generate quote from prompt
 export function useGenerateQuote() {
   return useMutation({
-    mutationFn: async (prompt: string): Promise<QuoteGenResponse> => {
-      const response = await api.post('/v1/quote/generate', { prompt })
-      return response.data
+    mutationFn: async (data: string | { prompt: string; attachments?: File[] }): Promise<QuoteGenResponse> => {
+      // Handle backward compatibility with string prompt
+      if (typeof data === 'string') {
+        const response = await api.post('/v1/quote/generate', { prompt: data })
+        return response.data
+      }
+      
+      // Handle new format with attachments
+      const { prompt, attachments } = data
+      
+      if (attachments && attachments.length > 0) {
+        // Use FormData for file uploads
+        const formData = new FormData()
+        formData.append('prompt', prompt)
+        
+        for (const file of attachments) {
+          formData.append('attachments', file)
+        }
+        
+        const response = await api.post('/v1/quote/generate', formData)
+        return response.data
+      } else {
+        // No attachments, use regular JSON
+        const response = await api.post('/v1/quote/generate', { prompt })
+        return response.data
+      }
     },
   })
 }
