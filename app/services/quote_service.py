@@ -628,8 +628,13 @@ Return the data as a JSON object with this structure:
             currency = quote_data.get('currency', 'USD')
             
             for i, item in enumerate(quote_data.get('items', [])):
-                quantity = int(item.get('quantity', 1))
-                unit_price = float(item.get('unit_price', 0))
+                # Handle None values from AI response
+                quantity_value = item.get('quantity', 1)
+                quantity = int(quantity_value) if quantity_value is not None else 1
+                
+                unit_price_value = item.get('unit_price', 0)
+                unit_price = float(unit_price_value) if unit_price_value is not None else 0.0
+                
                 subtotal = unit_price * quantity
                 
                 quote_items.append({
