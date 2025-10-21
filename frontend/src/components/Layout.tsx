@@ -9,7 +9,8 @@ import {
   Building2, 
   Settings, 
   Menu,
-  ChevronLeft
+  ChevronLeft,
+  ExternalLink
 } from 'lucide-react'
 import { cn } from '@/lib-utils/utils'
 
@@ -19,6 +20,7 @@ const navigation = [
   { name: 'Products', href: '/products', icon: Package },
   { name: 'Brands', href: '/brands', icon: Building2 },
   { name: 'Rules', href: '/rules', icon: Settings },
+  { name: 'URL Scanner', href: '/url-scan', icon: ExternalLink },
 ]
 
 export default function Layout() {

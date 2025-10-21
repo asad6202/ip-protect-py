@@ -10,6 +10,7 @@ import QuoteCreateFromPromptPage from './features/quotes/pages/QuoteCreateFromPr
 import QuoteDetailPage from './features/quotes/pages/QuoteDetailPage'
 import RuleSetListPage from './features/rules/pages/RuleSetListPage'
 import RuleSetDetailPage from './features/rules/pages/RuleSetDetailPage'
+import URLScanPage from './features/url-scan/pages/URLScanPage'
 
 export const router = createBrowserRouter([
   {
@@ -75,6 +76,10 @@ export const router = createBrowserRouter([
             element: <RuleSetDetailPage />,
           },
         ],
+      },
+      {
+        path: 'url-scan',
+        element: <URLScanPage />,
       },
     ],
   },

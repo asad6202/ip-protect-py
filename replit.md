@@ -61,6 +61,13 @@ Preferred communication style: Simple, everyday language.
   - Comprehensive SSRF protection (blocks private IPs, IPv4-mapped IPv6, tunneling)
   - Secure redirect handling and response size limits
   - Automatic merging of extracted products into existing quotes
+- **URL Product Ingestion**: Scan supplier websites to import products into catalog
+  - Dedicated UI page for scanning supplier URLs (/url-scan)
+  - GPT-4o extracts product information from web pages
+  - Auto-ingestion option to save products directly to brands/products database tables
+  - Brand association support for organizing imported products
+  - Error handling for partial ingestion failures with detailed feedback
+  - Navigation integrated into main sidebar for easy access
 - **Intent Extraction**: GPT-4o-powered parsing of natural language requirements into structured search criteria
 - **Hybrid Search**: Deterministic keyword matching with optional vector similarity fallback
 - **Product Matching**: Family-aware search (camera/NVR/switch) with feature normalization

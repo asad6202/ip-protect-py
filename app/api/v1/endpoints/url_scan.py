@@ -74,6 +74,7 @@ async def scan_supplier_url(
             
             products = scan_result["products"]
             ingested_count = None
+            ingestion_error = None
             
             # Auto-ingest products if requested
             if request.auto_ingest and products:
@@ -83,14 +84,34 @@ async def scan_supplier_url(
                     brand_name=request.brand_name,
                     source_url=str(request.url)
                 )
-                ingested_count = ingestion_result["ingested_count"]
+                
+                # Check if ingestion failed
+                if not ingestion_result.get("success", True):
+                    ingestion_error = ingestion_result.get("error", "Failed to ingest products")
+                    # Include individual errors if available
+                    if ingestion_result.get("errors"):
+                        error_details = "; ".join([
+                            f"{err.get('product', 'Unknown')}: {err.get('error', 'Unknown error')}"
+                            for err in ingestion_result["errors"][:3]  # Limit to first 3 errors
+                        ])
+                        ingestion_error = f"{ingestion_error}. Details: {error_details}"
+                    
+                    # If complete failure, raise HTTP exception
+                    if ingestion_result.get("ingested_count", 0) == 0:
+                        raise HTTPException(
+                            status_code=500,
+                            detail=f"Failed to ingest products: {ingestion_error}"
+                        )
+                
+                ingested_count = ingestion_result.get("ingested_count")
             
             return URLScanResponse(
                 success=True,
                 url=str(request.url),
                 products=products,
                 count=len(products),
-                ingested_count=ingested_count
+                ingested_count=ingested_count,
+                error=ingestion_error  # Include partial failure errors
             )
         
     except HTTPException:
