@@ -48,12 +48,12 @@ async def generate_quote(
                 # JSON request (prompt-only, backward compatibility)
                 prompt_text = request.get('prompt', '')
                 if not prompt_text:
-                    raise ValueError("Prompt is required")
+                    raise ValueError("Prompt is required (Empty)")
                 return await quote_service.generate_quote_data(prompt_text)
             else:
                 # FormData request (with potential attachments)
                 if not prompt:
-                    raise ValueError("Prompt is required")
+                    raise ValueError("Prompt is required (Missing)")
                 
                 # Check if attachments are provided
                 if attachments and len(attachments) > 0:
