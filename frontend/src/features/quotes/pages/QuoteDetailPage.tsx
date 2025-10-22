@@ -35,7 +35,7 @@ export default function QuoteDetailPage() {
   const [isEditingNotes, setIsEditingNotes] = useState(false)
   const [notes, setNotes] = useState('')
 
-  const { data: quote, isLoading, error, refetch } = useGetQuote(id!)
+  const { data: quote, isLoading, error } = useGetQuote(id!)
   const { data: itemFeedback = [] } = useGetQuoteItemFeedback(id!)
   const deleteQuote = useDeleteQuote()
   const updateQuote = useUpdateQuote()
