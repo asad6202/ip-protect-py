@@ -325,7 +325,7 @@ If a user provides a URL, detect it and set the scan_url modification to trigger
                            subtotal = unit_price * $3
                        WHERE quote_id = $1 AND sku = $2
                        RETURNING *""",
-                    quote_id, item["sku"], item["quantity"]
+                    quote_id, item["sku"], int(item["quantity"])
                 )
                 if row:
                     updated_items.append(dict(row))

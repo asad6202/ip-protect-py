@@ -64,6 +64,9 @@ async def generate_quote(
                     return await quote_service.generate_quote_data(prompt)
     
     except ValueError as e:
+        print(request)
+        print(prompt)
+        print(attachments)
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Quote generation failed: {str(e)}")
