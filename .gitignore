@@ -23,7 +23,6 @@ wheels/
 *.whl
 
 # Environments
-.env
 .venv
 env/
 venv/
@@ -69,10 +68,9 @@ frontend/dist/
 frontend/build/
 .git/
 *.log
-.env
-.env.local
 .env.development.local
 .env.test.local
 .env.production.local
 .DS_Store
 Thumbs.db
+config.bat
