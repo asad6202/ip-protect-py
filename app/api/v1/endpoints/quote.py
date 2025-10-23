@@ -2,6 +2,7 @@
 Quote generation endpoint using the new database schema.
 """
 
+import traceback
 from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, HTTPException, Depends, Query, Form, File, UploadFile, Body, Request
 from pydantic import BaseModel
@@ -74,8 +75,16 @@ async def generate_quote(
                 return await quote_service.generate_quote_data(prompt_text)
     
     except ValueError as e:
+        print("=" * 80)
+        print("ValueError in generate_quote:")
+        print(traceback.format_exc())
+        print("=" * 80)
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        print("=" * 80)
+        print("Exception in generate_quote:")
+        print(traceback.format_exc())
+        print("=" * 80)
         raise HTTPException(status_code=500, detail=f"Quote generation failed: {str(e)}")
 
 
