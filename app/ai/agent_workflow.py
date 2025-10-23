@@ -204,10 +204,25 @@ Return ONLY valid JSON."""
             
             # Parse the agent's output
             content = result.final_output
+            print("=" * 80)
+            print("DEBUG - Agent response content:")
+            print(content)
+            print("=" * 80)
+            
             if not content:
                 raise Exception("Empty response from OpenAI")
-            result_data = json.loads(content)
-            return result_data
+            
+            # Try to parse JSON with error handling
+            try:
+                result_data = json.loads(content)
+                # Ensure it's a dict
+                if not isinstance(result_data, dict):
+                    raise ValueError(f"Expected dict, got {type(result_data).__name__}")
+                return result_data
+            except json.JSONDecodeError as e:
+                print(f"ERROR - Failed to parse JSON: {e}")
+                print(f"Content that failed to parse: {content[:500]}...")
+                raise Exception(f"Invalid JSON response from agent: {str(e)}")
             
         except Exception as e:
             raise Exception(f"Quote generation failed: {str(e)}")
