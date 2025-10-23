@@ -75,6 +75,12 @@ class ChatService:
         # Run the agent using Runner
         result = await Runner.run(chat_agent, messages)
         
+        # Debug output
+        print("=" * 80)
+        print("DEBUG - Chat Agent result.final_output:")
+        print(result.final_output)
+        print("=" * 80)
+        
         # Parse AI response
         ai_response = json.loads(result.final_output)
         
