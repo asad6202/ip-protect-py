@@ -217,12 +217,14 @@ Return ONLY valid JSON."""
                 result_data = json.loads(content)
                 # Ensure it's a dict
                 if not isinstance(result_data, dict):
-                    raise ValueError(f"Expected dict, got {type(result_data).__name__}")
+                    print(f"WARNING - Expected dict, got {type(result_data).__name__}, returning raw content")
+                    return {"raw_content": content}
                 return result_data
             except json.JSONDecodeError as e:
-                print(f"ERROR - Failed to parse JSON: {e}")
-                print(f"Content that failed to parse: {content[:500]}...")
-                raise Exception(f"Invalid JSON response from agent: {str(e)}")
+                print(f"WARNING - Failed to parse JSON: {e}")
+                print(f"Returning raw content instead")
+                # Return the content as-is wrapped in a dict
+                return {"raw_content": content}
             
         except Exception as e:
             raise Exception(f"Quote generation failed: {str(e)}")
