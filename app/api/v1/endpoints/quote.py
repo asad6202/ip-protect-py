@@ -66,13 +66,14 @@ async def generate_quote(
             if not prompt_text:
                 raise ValueError("Prompt is required")
             
+            return await quote_service.generate_quote_from_attachments(prompt_text, attachments)
             # Check if attachments are provided
-            if attachments and len(attachments) > 0:
+            #if attachments and len(attachments) > 0:
                 # Use attachment-based generation (skip database lookup)
-                return await quote_service.generate_quote_from_attachments(prompt_text, attachments)
-            else:
-                # Use traditional database product lookup
-                return await quote_service.generate_quote_data(prompt_text)
+            #    return await quote_service.generate_quote_from_attachments(prompt_text, attachments)
+            #else:
+            #    # Use traditional database product lookup
+            #    return await quote_service.generate_quote_data(prompt_text)
     
     except ValueError as e:
         print("=" * 80)
