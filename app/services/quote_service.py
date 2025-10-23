@@ -631,6 +631,10 @@ Return the data as a JSON object with this structure:
             
             # Parse the agent's output
             result_text = result.final_output
+            print("=" * 80)
+            print("DEBUG - Attachment Agent result_text (line 634):")
+            print(result_text)
+            print("=" * 80)
             quote_data = json.loads(result_text)
             
             # Process items and calculate totals
