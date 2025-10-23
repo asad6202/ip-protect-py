@@ -3,7 +3,7 @@ Quote generation endpoint using the new database schema.
 """
 
 from typing import List, Dict, Any, Optional
-from fastapi import APIRouter, HTTPException, Depends, Query, Form, File, UploadFile, Body
+from fastapi import APIRouter, HTTPException, Depends, Query, Form, File, UploadFile, Body, Request
 from pydantic import BaseModel
 from schemas import (
     QuoteRequest, QuoteResponse, QuoteListResponse, 
@@ -29,34 +29,37 @@ def get_database() -> Database:
 
 @router.post("/quote/generate")
 async def generate_quote(
-    request: Optional[Dict] = Body(default=None),
-    prompt: Optional[str] = Form(default=None),
-    attachments: List[UploadFile] = File(default=[]),
+    request: Request,
     db: Database = Depends(get_database)
 ):
     """Generate quote data from prompt and/or attachments without saving to database.
     Accepts both JSON (for prompt-only) and multipart/form-data (for attachments)."""
     try:
-        # Debug print statements
-        print(f"DEBUG - request: {request}")
-        print(f"DEBUG - prompt: {prompt}")
-        print(f"DEBUG - attachments: {attachments}")
-        print(f"DEBUG - attachments length: {len(attachments) if attachments else 0}")
-        
         if not db._pool:
             await db.connect()
 
         async with db._pool.acquire() as conn:
             quote_service = QuoteService(conn)
             
-            # Determine prompt text from either request body or form data
+            # Check Content-Type to determine how to parse the request
+            content_type = request.headers.get("content-type", "")
+            
             prompt_text = None
-            if request and isinstance(request, dict):
-                # JSON request (prompt-only, backward compatibility)
-                prompt_text = request.get('prompt', '')
-            elif prompt:
-                # FormData request
-                prompt_text = prompt
+            attachments = []
+            
+            if "application/json" in content_type:
+                # Parse JSON body
+                body = await request.json()
+                prompt_text = body.get("prompt", "")
+                print(f"DEBUG - JSON request, prompt: {prompt_text}")
+            elif "multipart/form-data" in content_type:
+                # Parse form data
+                form = await request.form()
+                prompt_text = form.get("prompt", "")
+                attachments = form.getlist("attachments")
+                print(f"DEBUG - FormData request, prompt: {prompt_text}, attachments: {len(attachments)}")
+            else:
+                raise ValueError(f"Unsupported Content-Type: {content_type}")
             
             # Validate we have a prompt
             if not prompt_text:
