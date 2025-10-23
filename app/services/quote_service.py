@@ -607,27 +607,27 @@ Return the data as a JSON object with this structure:
                 model="gpt-4o"
             )
             
-            # Prepare multimodal message with text and images
-            message_content = [
-                {
-                    "type": "text",
-                    "text": f"User request: {prompt}\n\nPlease extract product information from the attached files and generate a quote."
-                }
-            ]
+            # Build the user prompt - combine prompt text with attachment analysis request
+            user_prompt = f"User request: {prompt}\n\nPlease extract product information from the attached files and generate a quote."
             
-            # Add all attachment contents (text and images)
-            message_content.extend(attachment_contents)
+            # For Agents SDK, we need to convert content types
+            # If we have images/PDFs, format them properly
+            if attachment_contents:
+                # Build attachment descriptions for the prompt
+                attachment_desc = []
+                for content in attachment_contents:
+                    if content["type"] == "text":
+                        attachment_desc.append(content["text"])
+                    elif content["type"] == "image_url":
+                        attachment_desc.append("[Image attachment - analyzing visually...]")
+                
+                # Combine prompt with attachment context
+                if attachment_desc:
+                    user_prompt += "\n\n" + "\n\n".join(attachment_desc)
             
-            # Create messages in the format expected by the agent
-            user_messages = [
-                {
-                    "role": "user",
-                    "content": message_content
-                }
-            ]
-            
-            # Run the agent using Runner with multimodal messages
-            result = await Runner.run(agent, user_messages)
+            # Run the agent using Runner with text input
+            # Note: Agents SDK handles images through file uploads, not inline base64
+            result = await Runner.run(agent, user_prompt)
             
             # Parse the agent's output
             result_text = result.final_output

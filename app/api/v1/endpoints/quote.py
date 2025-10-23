@@ -43,30 +43,28 @@ async def generate_quote(
         async with db._pool.acquire() as conn:
             quote_service = QuoteService(conn)
             
-            # Handle both JSON and FormData inputs
-            if request:
+            # Determine prompt text from either request body or form data
+            prompt_text = None
+            if request and isinstance(request, dict):
                 # JSON request (prompt-only, backward compatibility)
                 prompt_text = request.get('prompt', '')
-                if not prompt_text:
-                    raise ValueError("Prompt is required (Empty)")
-                return await quote_service.generate_quote_data(prompt_text)
+            elif prompt:
+                # FormData request
+                prompt_text = prompt
+            
+            # Validate we have a prompt
+            if not prompt_text:
+                raise ValueError("Prompt is required")
+            
+            # Check if attachments are provided
+            if attachments and len(attachments) > 0:
+                # Use attachment-based generation (skip database lookup)
+                return await quote_service.generate_quote_from_attachments(prompt_text, attachments)
             else:
-                # FormData request (with potential attachments)
-                if not prompt:
-                    raise ValueError("Prompt is required (Missing)")
-                
-                # Check if attachments are provided
-                if attachments and len(attachments) > 0:
-                    # Use attachment-based generation (skip database lookup)
-                    return await quote_service.generate_quote_from_attachments(prompt, attachments)
-                else:
-                    # Use traditional database product lookup
-                    return await quote_service.generate_quote_data(prompt)
+                # Use traditional database product lookup
+                return await quote_service.generate_quote_data(prompt_text)
     
     except ValueError as e:
-        print(request)
-        print(prompt)
-        print(attachments)
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Quote generation failed: {str(e)}")
