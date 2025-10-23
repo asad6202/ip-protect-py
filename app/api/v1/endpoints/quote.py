@@ -37,6 +37,12 @@ async def generate_quote(
     """Generate quote data from prompt and/or attachments without saving to database.
     Accepts both JSON (for prompt-only) and multipart/form-data (for attachments)."""
     try:
+        # Debug print statements
+        print(f"DEBUG - request: {request}")
+        print(f"DEBUG - prompt: {prompt}")
+        print(f"DEBUG - attachments: {attachments}")
+        print(f"DEBUG - attachments length: {len(attachments) if attachments else 0}")
+        
         if not db._pool:
             await db.connect()
 
