@@ -607,18 +607,27 @@ Return the data as a JSON object with this structure:
                 model="gpt-4o"
             )
             
-            # Prepare the user message with attachments
-            user_message_parts = [f"User request: {prompt}\n\nPlease extract product information from the attached files and generate a quote."]
-            for content in attachment_contents:
-                if content["type"] == "text":
-                    user_message_parts.append(content["text"])
-                elif content["type"] == "image_url":
-                    user_message_parts.append(f"[Image attachment provided]")
+            # Prepare multimodal message with text and images
+            message_content = [
+                {
+                    "type": "text",
+                    "text": f"User request: {prompt}\n\nPlease extract product information from the attached files and generate a quote."
+                }
+            ]
             
-            user_message = "\n\n".join(user_message_parts)
+            # Add all attachment contents (text and images)
+            message_content.extend(attachment_contents)
             
-            # Run the agent using Runner
-            result = await Runner.run(agent, user_message)
+            # Create messages in the format expected by the agent
+            user_messages = [
+                {
+                    "role": "user",
+                    "content": message_content
+                }
+            ]
+            
+            # Run the agent using Runner with multimodal messages
+            result = await Runner.run(agent, user_messages)
             
             # Parse the agent's output
             result_text = result.final_output
