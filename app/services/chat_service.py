@@ -52,9 +52,7 @@ class ChatService:
         
         # Create chat agent
         chat_agent = Agent(
-            name="Protect IP – Quoting Flow",
-            instructions=system_prompt,
-            model="gpt-4o"
+            name="Protect IP – Quoting Flow"
         )
         
         # Build messages for the agent

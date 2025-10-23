@@ -98,24 +98,7 @@ class AgentWorkflow:
         try:
             # Create router agent
             router_agent = Agent(
-                name="Router Agent",
-                instructions="""You are a classification agent for the Protect IP workflow.
-Your only job is to decide what type of request this is and return a small JSON object.
-
-Possible intents:
-- "quote_request": A natural-language request for a quote or list of products (e.g., "Need 3 outdoor 4K IR cameras and an NVR")
-- "rfp": The user uploaded or mentioned an RFP or tender document
-- "pricing_update": The user mentioned price lists, vendors, or distributor updates
-- "rule_edit": The user mentioned rules, constraints, or company policies
-
-Return ONLY JSON:
-{
-  "intent": "<one of the four above>",
-  "normalized": { "details you extracted, if any" }
-}
-No prose or explanations.
-If unsure, choose "quote_request".""",
-                model="gpt-4o"
+                name="Router Agent"
             )
             
             # Run the agent using Runner
@@ -194,9 +177,7 @@ Return ONLY valid JSON."""
             
             # Create quote builder agent
             quote_builder_agent = Agent(
-                name="Quote Builder Agent",
-                instructions=instructions,
-                model="gpt-4o"
+                name="Quote Builder Agent"
             )
             
             # Run the agent using Runner

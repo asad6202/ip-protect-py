@@ -575,36 +575,7 @@ Be concise but include all relevant product details. Use bullet points."""
             
             # Create the "Protect IP – Quoting Flow" agent
             agent = Agent(
-                name="Protect IP – Quoting Flow",
-                instructions="""You are a quote generation assistant for CCTV/security camera systems. 
-Extract product information from the provided images and documents to create a structured quote with accurate calculations.
-
-For each product found, extract:
-- SKU or model number
-- Product description
-- Quantity (if specified, otherwise default to 1)
-- Unit price (if available)
-- Currency (default to USD)
-
-Calculate totals accurately:
-- subtotal = unit_price * quantity for each item
-- total = sum of all subtotals
-
-Return the data as a JSON object with this structure:
-{
-  "items": [
-    {
-      "sku": "MODEL-123",
-      "description": "Product description",
-      "quantity": 1,
-      "unit_price": 100.00,
-      "currency": "USD"
-    }
-  ],
-  "currency": "USD",
-  "notes": "Any additional notes or observations"
-}""",
-                model="gpt-4o"
+                name="Protect IP – Quoting Flow"
             )
             
             # Build the user prompt - combine prompt text with attachment analysis request
