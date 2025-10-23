@@ -14,6 +14,7 @@ from fastapi import UploadFile
 from openai import AsyncOpenAI
 from PyPDF2 import PdfReader
 from PIL import Image
+from agents import Agent, Runner
 
 from app.ai.intent_extractor import extract_intent
 from app.ai.agent_workflow import get_agent_workflow
@@ -469,9 +470,9 @@ Be concise but include all relevant product details. Use bullet points."""
         return "\n\n---\n\n".join(summaries)
 
     async def generate_quote_from_attachments(self, prompt: str, attachments: List[UploadFile]):
-        """Generate quote data from attachments using OpenAI vision API, skipping database lookup."""
+        """Generate quote data from attachments using OpenAI Agent, skipping database lookup."""
         try:
-            # Process attachments and prepare for OpenAI
+            # Process attachments and prepare content
             attachment_contents = []
             
             for attachment in attachments:
@@ -572,12 +573,11 @@ Be concise but include all relevant product details. Use bullet points."""
             if not attachment_contents:
                 raise ValueError("No valid attachments to process")
             
-            # Create messages for OpenAI with attachments
-            messages = [
-                {
-                    "role": "system",
-                    "content": """You are a quote generation assistant for CCTV/security camera systems. 
-Extract product information from the provided images and documents to create a structured quote.
+            # Create the "Protect IP – Quoting Flow" agent
+            agent = Agent(
+                name="Protect IP – Quoting Flow",
+                instructions="""You are a quote generation assistant for CCTV/security camera systems. 
+Extract product information from the provided images and documents to create a structured quote with accurate calculations.
 
 For each product found, extract:
 - SKU or model number
@@ -585,6 +585,10 @@ For each product found, extract:
 - Quantity (if specified, otherwise default to 1)
 - Unit price (if available)
 - Currency (default to USD)
+
+Calculate totals accurately:
+- subtotal = unit_price * quantity for each item
+- total = sum of all subtotals
 
 Return the data as a JSON object with this structure:
 {
@@ -599,27 +603,25 @@ Return the data as a JSON object with this structure:
   ],
   "currency": "USD",
   "notes": "Any additional notes or observations"
-}"""
-                },
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": f"User request: {prompt}\n\nPlease extract product information from the attached files and generate a quote."},
-                        *attachment_contents
-                    ]
-                }
-            ]
-            
-            # Call OpenAI GPT-4o vision API
-            response = await self.openai_client.chat.completions.create(
-                model="gpt-4o",
-                messages=messages,
-                temperature=0.0,
-                response_format={"type": "json_object"}
+}""",
+                model="gpt-4o"
             )
             
-            # Parse the response
-            result_text = response.choices[0].message.content
+            # Prepare the user message with attachments
+            user_message_parts = [f"User request: {prompt}\n\nPlease extract product information from the attached files and generate a quote."]
+            for content in attachment_contents:
+                if content["type"] == "text":
+                    user_message_parts.append(content["text"])
+                elif content["type"] == "image_url":
+                    user_message_parts.append(f"[Image attachment provided]")
+            
+            user_message = "\n\n".join(user_message_parts)
+            
+            # Run the agent using Runner
+            result = await Runner.run(agent, user_message)
+            
+            # Parse the agent's output
+            result_text = result.final_output
             quote_data = json.loads(result_text)
             
             # Process items and calculate totals

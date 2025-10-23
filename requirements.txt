@@ -16,3 +16,4 @@ lxml
 requests
 pypdf2
 pillow
+openai-agents
