@@ -212,9 +212,19 @@ Return ONLY valid JSON."""
             if not content:
                 raise Exception("Empty response from OpenAI")
             
+            # Strip markdown code block markers if present
+            content_stripped = content.strip()
+            if content_stripped.startswith("```json"):
+                content_stripped = content_stripped[7:]  # Remove ```json
+            elif content_stripped.startswith("```"):
+                content_stripped = content_stripped[3:]  # Remove ```
+            if content_stripped.endswith("```"):
+                content_stripped = content_stripped[:-3]  # Remove trailing ```
+            content_stripped = content_stripped.strip()
+            
             # Try to parse JSON with error handling
             try:
-                result_data = json.loads(content)
+                result_data = json.loads(content_stripped)
                 # Ensure it's a dict
                 if not isinstance(result_data, dict):
                     print(f"WARNING - Expected dict, got {type(result_data).__name__}, returning raw content")
