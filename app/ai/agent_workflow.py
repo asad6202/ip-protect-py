@@ -6,6 +6,7 @@ import os
 import json
 from typing import Dict, Any, List, Optional
 from openai import OpenAI
+from agents import Agent, Runner
 from pydantic import BaseModel
 
 
@@ -95,12 +96,10 @@ class AgentWorkflow:
         Returns intent type: quote_request, rfp, pricing_update, or rule_edit
         """
         try:
-            response = self.client.chat.completions.create(
-                model="gpt-4o",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": """You are a classification agent for the Protect IP workflow.
+            # Create router agent
+            router_agent = Agent(
+                name="Router Agent",
+                instructions="""You are a classification agent for the Protect IP workflow.
 Your only job is to decide what type of request this is and return a small JSON object.
 
 Possible intents:
@@ -115,19 +114,19 @@ Return ONLY JSON:
   "normalized": { "details you extracted, if any" }
 }
 No prose or explanations.
-If unsure, choose "quote_request"."""
-                    },
-                    {"role": "user", "content": input_text}
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.0
+If unsure, choose "quote_request".""",
+                model="gpt-4o"
             )
             
-            content = response.choices[0].message.content
+            # Run the agent using Runner
+            result = await Runner.run(router_agent, input_text)
+            
+            # Parse the agent's output
+            content = result.final_output
             if not content:
                 return {"intent": "quote_request", "normalized": {}}
-            result = json.loads(content)
-            return result
+            result_data = json.loads(content)
+            return result_data
             
         except Exception as e:
             # Default to quote_request if classification fails
@@ -142,10 +141,7 @@ If unsure, choose "quote_request"."""
         Quote Builder Agent: Generate quote from natural language request
         """
         try:
-            system_prompt = f"""You are an expert quoting assistant for a CCTV security integrator.
-
-USER REQUEST
-{input_text}
+            instructions = f"""You are an expert quoting assistant for a CCTV security integrator.
 
 PRODUCT CATALOG CONTEXT
 {product_catalog_context if product_catalog_context else "Use your knowledge of common security camera products"}
@@ -196,21 +192,22 @@ Return items for:
 
 Return ONLY valid JSON."""
             
-            response = self.client.chat.completions.create(
-                model="gpt-4o",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": input_text}
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.3
+            # Create quote builder agent
+            quote_builder_agent = Agent(
+                name="Quote Builder Agent",
+                instructions=instructions,
+                model="gpt-4o"
             )
             
-            content = response.choices[0].message.content
+            # Run the agent using Runner
+            result = await Runner.run(quote_builder_agent, input_text)
+            
+            # Parse the agent's output
+            content = result.final_output
             if not content:
                 raise Exception("Empty response from OpenAI")
-            result = json.loads(content)
-            return result
+            result_data = json.loads(content)
+            return result_data
             
         except Exception as e:
             raise Exception(f"Quote generation failed: {str(e)}")
