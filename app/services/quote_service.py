@@ -635,7 +635,18 @@ Return the data as a JSON object with this structure:
             print("DEBUG - Attachment Agent result_text (line 634):")
             print(result_text)
             print("=" * 80)
-            quote_data = json.loads(result_text)
+            
+            # Strip markdown code block markers if present
+            result_text_stripped = result_text.strip()
+            if result_text_stripped.startswith("```json"):
+                result_text_stripped = result_text_stripped[7:]  # Remove ```json
+            elif result_text_stripped.startswith("```"):
+                result_text_stripped = result_text_stripped[3:]  # Remove ```
+            if result_text_stripped.endswith("```"):
+                result_text_stripped = result_text_stripped[:-3]  # Remove trailing ```
+            result_text_stripped = result_text_stripped.strip()
+            
+            quote_data = json.loads(result_text_stripped)
             
             # Process items and calculate totals
             quote_items = []
