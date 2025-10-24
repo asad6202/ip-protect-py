@@ -570,16 +570,13 @@ Be concise but include all relevant product details. Use bullet points."""
                         "text": f"Document: {attachment.filename}\nType: {content_type}\nNote: User will describe the product details from this document."
                     })
             
-            if not attachment_contents:
-                raise ValueError("No valid attachments to process")
-            
             # Create the "Protect IP – Quoting Flow" agent
             agent = Agent(
                 name="Protect IP – Quoting Flow"
             )
             
             # Build the user prompt - combine prompt text with attachment analysis request
-            user_prompt = f"User request: {prompt}\n\nPlease extract product information from the attached files and generate a quote."
+            user_prompt = f"User request: {prompt}" 
             
             # For Agents SDK, we need to convert content types
             # If we have images/PDFs, format them properly
