@@ -8,6 +8,7 @@ import base64
 import re
 from typing import List, Dict, Any, Optional
 from openai import AsyncOpenAI
+from agents import Agent, Runner
 
 
 class ChatService:
@@ -49,8 +50,13 @@ class ChatService:
         # Build system prompt with quote context
         system_prompt = self._build_system_prompt(quote)
         
-        # Build messages for OpenAI
-        messages = [{"role": "system", "content": system_prompt}]
+        # Create chat agent
+        chat_agent = Agent(
+            name="Protect IP – Quoting Flow"
+        )
+        
+        # Build messages for the agent
+        messages = []
         
         # Add chat history
         if chat_history:
@@ -64,16 +70,17 @@ class ChatService:
         user_content = self._build_user_message(message, attachments)
         messages.append({"role": "user", "content": user_content})
         
-        # Call OpenAI to process the request
-        response = await self.client.chat.completions.create(
-            model="gpt-4o",
-            messages=messages,
-            temperature=0.7,
-            response_format={"type": "json_object"}
-        )
+        # Run the agent using Runner
+        result = await Runner.run(chat_agent, messages)
+        
+        # Debug output
+        print("=" * 80)
+        print("DEBUG - Chat Agent result.final_output:")
+        print(result.final_output)
+        print("=" * 80)
         
         # Parse AI response
-        ai_response = json.loads(response.choices[0].message.content)
+        ai_response = json.loads(result.final_output)
         
         # Apply modifications to quote
         updated_items = None

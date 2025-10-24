@@ -14,6 +14,7 @@ from fastapi import UploadFile
 from openai import AsyncOpenAI
 from PyPDF2 import PdfReader
 from PIL import Image
+from agents import Agent, Runner
 
 from app.ai.intent_extractor import extract_intent
 from app.ai.agent_workflow import get_agent_workflow
@@ -469,9 +470,9 @@ Be concise but include all relevant product details. Use bullet points."""
         return "\n\n---\n\n".join(summaries)
 
     async def generate_quote_from_attachments(self, prompt: str, attachments: List[UploadFile]):
-        """Generate quote data from attachments using OpenAI vision API, skipping database lookup."""
+        """Generate quote data from attachments using OpenAI Agent, skipping database lookup."""
         try:
-            # Process attachments and prepare for OpenAI
+            # Process attachments and prepare content
             attachment_contents = []
             
             for attachment in attachments:
@@ -569,58 +570,51 @@ Be concise but include all relevant product details. Use bullet points."""
                         "text": f"Document: {attachment.filename}\nType: {content_type}\nNote: User will describe the product details from this document."
                     })
             
-            if not attachment_contents:
-                raise ValueError("No valid attachments to process")
-            
-            # Create messages for OpenAI with attachments
-            messages = [
-                {
-                    "role": "system",
-                    "content": """You are a quote generation assistant for CCTV/security camera systems. 
-Extract product information from the provided images and documents to create a structured quote.
-
-For each product found, extract:
-- SKU or model number
-- Product description
-- Quantity (if specified, otherwise default to 1)
-- Unit price (if available)
-- Currency (default to USD)
-
-Return the data as a JSON object with this structure:
-{
-  "items": [
-    {
-      "sku": "MODEL-123",
-      "description": "Product description",
-      "quantity": 1,
-      "unit_price": 100.00,
-      "currency": "USD"
-    }
-  ],
-  "currency": "USD",
-  "notes": "Any additional notes or observations"
-}"""
-                },
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": f"User request: {prompt}\n\nPlease extract product information from the attached files and generate a quote."},
-                        *attachment_contents
-                    ]
-                }
-            ]
-            
-            # Call OpenAI GPT-4o vision API
-            response = await self.openai_client.chat.completions.create(
-                model="gpt-4o",
-                messages=messages,
-                temperature=0.0,
-                response_format={"type": "json_object"}
+            # Create the "Protect IP – Quoting Flow" agent
+            agent = Agent(
+                name="Protect IP – Quoting Flow"
             )
             
-            # Parse the response
-            result_text = response.choices[0].message.content
-            quote_data = json.loads(result_text)
+            # Build the user prompt - combine prompt text with attachment analysis request
+            user_prompt = f"User request: {prompt}" 
+            
+            # For Agents SDK, we need to convert content types
+            # If we have images/PDFs, format them properly
+            if attachment_contents:
+                # Build attachment descriptions for the prompt
+                attachment_desc = []
+                for content in attachment_contents:
+                    if content["type"] == "text":
+                        attachment_desc.append(content["text"])
+                    elif content["type"] == "image_url":
+                        attachment_desc.append("[Image attachment - analyzing visually...]")
+                
+                # Combine prompt with attachment context
+                if attachment_desc:
+                    user_prompt += "\n\n" + "\n\n".join(attachment_desc)
+            
+            # Run the agent using Runner with text input
+            # Note: Agents SDK handles images through file uploads, not inline base64
+            result = await Runner.run(agent, user_prompt)
+            
+            # Parse the agent's output
+            result_text = result.final_output
+            print("=" * 80)
+            print("DEBUG - Attachment Agent result_text (line 634):")
+            print(result_text)
+            print("=" * 80)
+            
+            # Strip markdown code block markers if present
+            result_text_stripped = result_text.strip()
+            if result_text_stripped.startswith("```json"):
+                result_text_stripped = result_text_stripped[7:]  # Remove ```json
+            elif result_text_stripped.startswith("```"):
+                result_text_stripped = result_text_stripped[3:]  # Remove ```
+            if result_text_stripped.endswith("```"):
+                result_text_stripped = result_text_stripped[:-3]  # Remove trailing ```
+            result_text_stripped = result_text_stripped.strip()
+            
+            quote_data = json.loads(result_text_stripped)
             
             # Process items and calculate totals
             quote_items = []

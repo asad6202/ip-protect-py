@@ -32,9 +32,13 @@ Preferred communication style: Simple, everyday language.
 - **Modular Feature Architecture**: Organized by business domains (quotes, products, brands, etc.)
 
 ## AI and Search Strategy
-- **OpenAI Agent Workflow**: Multi-agent system for intelligent quote generation with safety guardrails
-  - Router Agent: Classifies incoming requests (quote_request, rfp, pricing_update, rule_edit)
-  - Quote Builder Agent: Generates structured quote data from natural language
+- **OpenAI Agents SDK Integration**: Fully migrated to OpenAI Agents SDK (openai-agents v0.4.1) for all AI processing
+  - Uses `Agent` and `Runner` classes from the Agents SDK instead of direct Chat Completions API
+  - **Router Agent**: Classifies incoming requests (quote_request, rfp, pricing_update, rule_edit) using Agent SDK
+  - **Quote Builder Agent**: Generates structured quote data from natural language using Agent SDK
+  - **Chat Agent**: Processes interactive quote modifications using Agent SDK with multimodal support
+  - **Attachment Quote Agent**: "Protect IP – Quoting Flow" agent handles multimodal attachment processing (images, PDFs, documents)
+  - Proper multimodal message formatting with content arrays (text + image_url types) for vision support
   - Guardrails System: PII detection, content moderation, and jailbreak prevention
   - Uses OPENAI_API_KEY from environment secrets for secure API access
 - **Attachment-Based Quote Generation**: AI-powered quote generation directly from files

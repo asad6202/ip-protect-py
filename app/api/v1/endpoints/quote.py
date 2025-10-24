@@ -2,8 +2,9 @@
 Quote generation endpoint using the new database schema.
 """
 
+import traceback
 from typing import List, Dict, Any, Optional
-from fastapi import APIRouter, HTTPException, Depends, Query, Form, File, UploadFile, Body
+from fastapi import APIRouter, HTTPException, Depends, Query, Form, File, UploadFile, Body, Request
 from pydantic import BaseModel
 from schemas import (
     QuoteRequest, QuoteResponse, QuoteListResponse, 
@@ -29,9 +30,7 @@ def get_database() -> Database:
 
 @router.post("/quote/generate")
 async def generate_quote(
-    request: Optional[Dict] = Body(default=None),
-    prompt: Optional[str] = Form(default=None),
-    attachments: List[UploadFile] = File(default=[]),
+    request: Request,
     db: Database = Depends(get_database)
 ):
     """Generate quote data from prompt and/or attachments without saving to database.
@@ -43,32 +42,50 @@ async def generate_quote(
         async with db._pool.acquire() as conn:
             quote_service = QuoteService(conn)
             
-            # Handle both JSON and FormData inputs
-            if request:
-                # JSON request (prompt-only, backward compatibility)
-                prompt_text = request.get('prompt', '')
-                if not prompt_text:
-                    raise ValueError("Prompt is required (Empty)")
-                return await quote_service.generate_quote_data(prompt_text)
+            # Check Content-Type to determine how to parse the request
+            content_type = request.headers.get("content-type", "")
+            
+            prompt_text = None
+            attachments = []
+            
+            if "application/json" in content_type:
+                # Parse JSON body
+                body = await request.json()
+                prompt_text = body.get("prompt", "")
+                print(f"DEBUG - JSON request, prompt: {prompt_text}")
+            elif "multipart/form-data" in content_type:
+                # Parse form data
+                form = await request.form()
+                prompt_text = form.get("prompt", "")
+                attachments = form.getlist("attachments")
+                print(f"DEBUG - FormData request, prompt: {prompt_text}, attachments: {len(attachments)}")
             else:
-                # FormData request (with potential attachments)
-                if not prompt:
-                    raise ValueError("Prompt is required (Missing)")
-                
-                # Check if attachments are provided
-                if attachments and len(attachments) > 0:
-                    # Use attachment-based generation (skip database lookup)
-                    return await quote_service.generate_quote_from_attachments(prompt, attachments)
-                else:
-                    # Use traditional database product lookup
-                    return await quote_service.generate_quote_data(prompt)
+                raise ValueError(f"Unsupported Content-Type: {content_type}")
+            
+            # Validate we have a prompt
+            if not prompt_text:
+                raise ValueError("Prompt is required")
+            
+            return await quote_service.generate_quote_from_attachments(prompt_text, attachments)
+            # Check if attachments are provided
+            #if attachments and len(attachments) > 0:
+                # Use attachment-based generation (skip database lookup)
+            #    return await quote_service.generate_quote_from_attachments(prompt_text, attachments)
+            #else:
+            #    # Use traditional database product lookup
+            #    return await quote_service.generate_quote_data(prompt_text)
     
     except ValueError as e:
-        print(request)
-        print(prompt)
-        print(attachments)
+        print("=" * 80)
+        print("ValueError in generate_quote:")
+        print(traceback.format_exc())
+        print("=" * 80)
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        print("=" * 80)
+        print("Exception in generate_quote:")
+        print(traceback.format_exc())
+        print("=" * 80)
         raise HTTPException(status_code=500, detail=f"Quote generation failed: {str(e)}")
 
 

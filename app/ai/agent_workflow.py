@@ -6,6 +6,7 @@ import os
 import json
 from typing import Dict, Any, List, Optional
 from openai import OpenAI
+from agents import Agent, Runner
 from pydantic import BaseModel
 
 
@@ -95,39 +96,20 @@ class AgentWorkflow:
         Returns intent type: quote_request, rfp, pricing_update, or rule_edit
         """
         try:
-            response = self.client.chat.completions.create(
-                model="gpt-4o",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": """You are a classification agent for the Protect IP workflow.
-Your only job is to decide what type of request this is and return a small JSON object.
-
-Possible intents:
-- "quote_request": A natural-language request for a quote or list of products (e.g., "Need 3 outdoor 4K IR cameras and an NVR")
-- "rfp": The user uploaded or mentioned an RFP or tender document
-- "pricing_update": The user mentioned price lists, vendors, or distributor updates
-- "rule_edit": The user mentioned rules, constraints, or company policies
-
-Return ONLY JSON:
-{
-  "intent": "<one of the four above>",
-  "normalized": { "details you extracted, if any" }
-}
-No prose or explanations.
-If unsure, choose "quote_request"."""
-                    },
-                    {"role": "user", "content": input_text}
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.0
+            # Create router agent
+            router_agent = Agent(
+                name="Router Agent"
             )
             
-            content = response.choices[0].message.content
+            # Run the agent using Runner
+            result = await Runner.run(router_agent, input_text)
+            
+            # Parse the agent's output
+            content = result.final_output
             if not content:
                 return {"intent": "quote_request", "normalized": {}}
-            result = json.loads(content)
-            return result
+            result_data = json.loads(content)
+            return result_data
             
         except Exception as e:
             # Default to quote_request if classification fails
@@ -142,10 +124,7 @@ If unsure, choose "quote_request"."""
         Quote Builder Agent: Generate quote from natural language request
         """
         try:
-            system_prompt = f"""You are an expert quoting assistant for a CCTV security integrator.
-
-USER REQUEST
-{input_text}
+            instructions = f"""You are an expert quoting assistant for a CCTV security integrator.
 
 PRODUCT CATALOG CONTEXT
 {product_catalog_context if product_catalog_context else "Use your knowledge of common security camera products"}
@@ -196,21 +175,47 @@ Return items for:
 
 Return ONLY valid JSON."""
             
-            response = self.client.chat.completions.create(
-                model="gpt-4o",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": input_text}
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.3
+            # Create quote builder agent
+            quote_builder_agent = Agent(
+                name="Quote Builder Agent"
             )
             
-            content = response.choices[0].message.content
+            # Run the agent using Runner
+            result = await Runner.run(quote_builder_agent, input_text)
+            
+            # Parse the agent's output
+            content = result.final_output
+            print("=" * 80)
+            print("DEBUG - Agent response content:")
+            print(content)
+            print("=" * 80)
+            
             if not content:
                 raise Exception("Empty response from OpenAI")
-            result = json.loads(content)
-            return result
+            
+            # Strip markdown code block markers if present
+            content_stripped = content.strip()
+            if content_stripped.startswith("```json"):
+                content_stripped = content_stripped[7:]  # Remove ```json
+            elif content_stripped.startswith("```"):
+                content_stripped = content_stripped[3:]  # Remove ```
+            if content_stripped.endswith("```"):
+                content_stripped = content_stripped[:-3]  # Remove trailing ```
+            content_stripped = content_stripped.strip()
+            
+            # Try to parse JSON with error handling
+            try:
+                result_data = json.loads(content_stripped)
+                # Ensure it's a dict
+                if not isinstance(result_data, dict):
+                    print(f"WARNING - Expected dict, got {type(result_data).__name__}, returning raw content")
+                    return {"raw_content": content}
+                return result_data
+            except json.JSONDecodeError as e:
+                print(f"WARNING - Failed to parse JSON: {e}")
+                print(f"Returning raw content instead")
+                # Return the content as-is wrapped in a dict
+                return {"raw_content": content}
             
         except Exception as e:
             raise Exception(f"Quote generation failed: {str(e)}")
